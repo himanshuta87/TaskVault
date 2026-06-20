@@ -1,0 +1,14 @@
+{
+  "name": "taskvault",
+  "version": "1.0.0",
+  "description": "TaskVault Discord Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "@supabase/supabase-js": "^2.39.8",
+    "dotenv": "^16.4.5"
+  }
+}
