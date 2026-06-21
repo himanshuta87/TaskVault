@@ -20,7 +20,6 @@ client.once('ready', () => {
     console.log(`✅ TaskVault Premium Platform is online! Logged in as ${client.user.tag}`);
 });
 
-// Reusable function to calculate metrics and build the scoring embeds
 function generateStatsEmbed(username, logs, subText) {
     const calcInterval = (days) => {
         const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -60,18 +59,16 @@ function generateStatsEmbed(username, logs, subText) {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // --- ADMIN: GRANT PREMIUM ACCESS ---
     if (message.content.startsWith('!grant')) {
         if (!message.member.permissions.has('Administrator')) return;
         const args = message.content.split(' ');
         const targetUser = message.mentions.users.first();
         const days = parseInt(args[2]);
 
-        if (!targetUser || isNaN(days)) return message.reply('❌ Format error! Use: `!grant @user <days>`');
+        if (!targetUser || isNaN(days)) return message.reply('❌ Format error! Use: !grant @user <days>');
 
         const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         
-        // Added Error Tracking Here
         const { error } = await supabase.from('user_subscriptions').upsert({ user_id: targetUser.id, expires_at: expiresAt });
         if (error) {
             console.error(error);
@@ -81,7 +78,6 @@ client.on('messageCreate', async (message) => {
         return message.reply(`✅ Premium configuration loaded. Granted **${days} days** of access to <@${targetUser.id}>.`);
     }
 
-    // --- ADMIN: VIEW INDIVIDUAL USER METRICS ---
     if (message.content.startsWith('!viewscore')) {
         if (!message.member.permissions.has('Administrator')) return;
         const targetUser = message.mentions.users.first() || message.author;
@@ -95,7 +91,6 @@ client.on('messageCreate', async (message) => {
         return message.reply({ embeds: [statsEmbed] });
     }
 
-    // --- ADMIN: VIEW GLOBAL STAFF RUNTIME SHEET ---
     if (message.content === '!viewall') {
         if (!message.member.permissions.has('Administrator')) return;
         
@@ -112,7 +107,6 @@ client.on('messageCreate', async (message) => {
         return message.reply({ content: manifestOutput.substring(0, 2000) });
     }
 
-    // --- ADMIN: DEPLOY PERSONAL DASHBOARD PANEL BUTTON ---
     if (message.content === '!postscore') {
         if (!message.member.permissions.has('Administrator')) return;
         
@@ -130,7 +124,6 @@ client.on('messageCreate', async (message) => {
         return;
     }
 
-    // --- STANDARD NAVIGATION PANEL SETUP ---
     if (message.content === '!poststart') {
         const menuEmbed = new EmbedBuilder()
             .setTitle('TaskVault — Start Menu')
@@ -150,12 +143,10 @@ client.on('messageCreate', async (message) => {
         return;
     }
 
-    // --- PREMIUM RESTRICTED ENGINE OPERATION BLOCK ---
     if (message.channel.id === GOOGLETASK_CHANNEL_ID) {
         const userQuery = message.content.trim();
         if (userQuery.length <= 3) return;
 
-        // Verify premium expiration credentials safely using maybeSingle()
         const { data: sub, error: subError } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', message.author.id).maybeSingle();
         
         if (subError || !sub || new Date(sub.expires_at) < new Date()) {
@@ -166,7 +157,6 @@ client.on('messageCreate', async (message) => {
         const answer = await searchDatabase(userQuery);
 
         if (answer) {
-            // Write to database logging metrics ledger
             await supabase.from('task_logs').insert([{ user_id: message.author.id, question: userQuery }]);
 
             const replyEmbed = new EmbedBuilder()
@@ -176,7 +166,6 @@ client.on('messageCreate', async (message) => {
                 .setFooter({ text: 'TaskVault Database' });
             await message.reply({ embeds: [replyEmbed] });
         } else {
-            // Notify user and dispatch missing prompt payload to unhandled collection alerts channel
             await message.reply({ content: '⏳ **This task is updating soon!** The tracking team has been alerted.' });
             
             const alertChannel = message.guild.channels.cache.get(UNANSWERED_CHANNEL_ID);
@@ -190,7 +179,6 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
 
-    // EPHEMERAL SECURE ACCOUNTING LEAF INTERACTION HANDLER
     if (interaction.customId === 'score_btn') {
         const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
         
@@ -227,7 +215,6 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// --- PLATFORM AUTO-DEPLOY REST INFRASTRUCTURE ---
 const http = require('http');
 http.createServer((req, res) => res.end('TaskVault is running!')).listen(process.env.PORT || 3000);
 
@@ -244,3 +231,11 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 })();
 
 client.login(process.env.DISCORD_TOKEN);
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err, origin) => {
+    console.error('⚠️ Uncaught Exception:', err, 'origin:', origin);
+});

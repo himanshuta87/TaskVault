@@ -1,4 +1,4 @@
-require('dotenv').config(); // Fixed: Changed 'Require' to lowercase 'require'
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -24,6 +24,4 @@ async function searchDatabase(userQuery) {
     }
 }
 
-// Export both the supabase client (for inserting tasks) 
-// and the searchDatabase function (for answering questions)
 module.exports = { supabase, searchDatabase };
