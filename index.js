@@ -10,7 +10,7 @@ const client = new Client({
     ]
 });
 
-// --- UPDATED LIVE CHANNEL CONFIGURATIONS ---
+// --- LIVE CHANNEL CONFIGURATIONS ---
 const GOOGLETASK_CHANNEL_ID = '1518236682950934619'; 
 const UNANSWERED_CHANNEL_ID = '1518236790958325821';
 const CHAT_CHANNEL_ID = '1518218058504736898';
@@ -61,28 +61,32 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     // --- ADMIN: GRANT PREMIUM ACCESS ---
-    // Usage: !grant @user 30
     if (message.content.startsWith('!grant')) {
         if (!message.member.permissions.has('Administrator')) return;
         const args = message.content.split(' ');
         const targetUser = message.mentions.users.first();
         const days = parseInt(args[2]);
 
-        if (!targetUser || isNaN(days)) return message.reply('❌ Format error! Use: \`!grant @user <days>\`');
+        if (!targetUser || isNaN(days)) return message.reply('❌ Format error! Use: `!grant @user <days>`');
 
         const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from('user_subscriptions').upsert({ user_id: targetUser.id, expires_at: expiresAt });
+        
+        // Added Error Tracking Here
+        const { error } = await supabase.from('user_subscriptions').upsert({ user_id: targetUser.id, expires_at: expiresAt });
+        if (error) {
+            console.error(error);
+            return message.reply(`❌ Supabase Database Error: ${error.message}\nMake sure RLS is disabled!`);
+        }
 
         return message.reply(`✅ Premium configuration loaded. Granted **${days} days** of access to <@${targetUser.id}>.`);
     }
 
     // --- ADMIN: VIEW INDIVIDUAL USER METRICS ---
-    // Usage: !viewscore @user
     if (message.content.startsWith('!viewscore')) {
         if (!message.member.permissions.has('Administrator')) return;
         const targetUser = message.mentions.users.first() || message.author;
 
-        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', targetUser.id).single();
+        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', targetUser.id).maybeSingle();
         const subText = sub ? `Active (Expires: ${new Date(sub.expires_at).toLocaleDateString()})` : 'No Subscription Found';
 
         const { data: logs } = await supabase.from('task_logs').select('created_at').eq('user_id', targetUser.id);
@@ -92,7 +96,6 @@ client.on('messageCreate', async (message) => {
     }
 
     // --- ADMIN: VIEW GLOBAL STAFF RUNTIME SHEET ---
-    // Usage: !viewall
     if (message.content === '!viewall') {
         if (!message.member.permissions.has('Administrator')) return;
         
@@ -110,7 +113,6 @@ client.on('messageCreate', async (message) => {
     }
 
     // --- ADMIN: DEPLOY PERSONAL DASHBOARD PANEL BUTTON ---
-    // Usage: !postscore
     if (message.content === '!postscore') {
         if (!message.member.permissions.has('Administrator')) return;
         
@@ -153,9 +155,10 @@ client.on('messageCreate', async (message) => {
         const userQuery = message.content.trim();
         if (userQuery.length <= 3) return;
 
-        // Verify premium expiration credentials
-        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', message.author.id).single();
-        if (!sub || new Date(sub.expires_at) < new Date()) {
+        // Verify premium expiration credentials safely using maybeSingle()
+        const { data: sub, error: subError } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', message.author.id).maybeSingle();
+        
+        if (subError || !sub || new Date(sub.expires_at) < new Date()) {
             return message.reply('❌ **Access Denied.** You do not have an active premium membership plan. Use **Contact Support** to unlock.');
         }
 
@@ -189,13 +192,13 @@ client.on('interactionCreate', async interaction => {
 
     // EPHEMERAL SECURE ACCOUNTING LEAF INTERACTION HANDLER
     if (interaction.customId === 'score_btn') {
-        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).single();
+        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
         
         let subText = 'No Subscription Active';
         if (sub) {
             const timeDiff = new Date(sub.expires_at) - Date.now();
             if (timeDiff > 0) {
-                const daysRemaining = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
                 subText = `${daysRemaining} days remaining`;
             } else {
                 subText = 'Subscription Expired';
