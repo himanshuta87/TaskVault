@@ -24,4 +24,6 @@ async function searchDatabase(userQuery) {
     }
 }
 
-module.exports = { searchDatabase };
+// Export both the supabase client (for inserting tasks) 
+// and the searchDatabase function (for answering questions)
+module.exports = { supabase, searchDatabase };

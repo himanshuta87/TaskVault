@@ -1,14 +1,17 @@
-// deploy-commands.js
-// Stores the structure of your Discord slash commands
-
 const commands = [
     {
         name: 'addtask',
         description: 'Add a new task to TaskVault',
         options: [
             {
-                name: 'task_name',
-                description: 'The name or details of the task',
+                name: 'question',
+                description: 'The question text',
+                type: 3, // Type 3 means it requires text input
+                required: true
+            },
+            {
+                name: 'answer',
+                description: 'The answer text',
                 type: 3, // Type 3 means it requires text input
                 required: true
             }
