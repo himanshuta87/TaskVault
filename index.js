@@ -1,5 +1,6 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
 const { searchDatabase } = require('./supabase');
 
 // Initialize Discord Client with necessary permissions
@@ -53,3 +54,43 @@ const http = require('http');
 http.createServer((req, res) => res.end('TaskVault is running!')).listen(process.env.PORT || 3000);
 
 client.login(process.env.DISCORD_TOKEN);
+
+client.on('messageCreate', async message => {
+    // Ignore messages from other bots
+    if (message.author.bot) return;
+
+    // The secret command to spawn the UI
+    if (message.content === '!setupmenu') {
+        const menuEmbed = new EmbedBuilder()
+            .setTitle('Welcome to TaskVault!')
+            .setDescription('Please select an option below to get started with your tasks.')
+            .setColor('#5865F2');
+            // We will add the image and texts later using your to-do list!
+
+        const buttonRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('btn_intro')
+                    .setLabel('Intro')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('btn_rules')
+                    .setLabel('Rules')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('btn_start')
+                    .setLabel('Start')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId('btn_help')
+                    .setLabel('Help')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+        // Send the menu to the channel
+        await message.channel.send({ embeds: [menuEmbed], components: [buttonRow] });
+        
+        // Delete the '!setupmenu' message so the command stays a secret
+        await message.delete().catch(() => {});
+    }
+});
