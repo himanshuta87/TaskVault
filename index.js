@@ -86,4 +86,21 @@ client.on('interactionCreate', async interaction => {
 
 const http = require('http');
 http.createServer((req, res) => res.end('TaskVault is running!')).listen(process.env.PORT || 3000);
+// --- AUTO-DEPLOY COMMANDS ---
+const { REST, Routes } = require('discord.js');
+const { commands } = require('./discord.command.js'); // Point to your command file
+
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+(async () => {
+    try {
+        console.log('Started refreshing application (/) commands.');
+        // Replace 'YOUR_CLIENT_ID' with your Bot ID from Discord Developer Portal
+        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
+        console.log('Successfully reloaded application (/) commands.');
+    } catch (error) {
+        console.error(error);
+    }
+})();
+
 client.login(process.env.DISCORD_TOKEN);
