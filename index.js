@@ -79,7 +79,7 @@ client.on('interactionCreate', async interaction => {
             const token = Math.random().toString(36).substring(7).toUpperCase();
             
             // REPLACE THIS ID!
-            const supportChannel = interaction.guild.channels.cache.get('1518224380339949720');
+            const supportChannel = interaction.guild.channels.cache.get('#1518224380339949720');
             if (supportChannel) {
                 supportChannel.send(`🔔 **New Support Request**\nUser: <@${interaction.user.id}>\nToken: **${token}**`);
             }
