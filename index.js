@@ -94,3 +94,22 @@ client.on('messageCreate', async message => {
         await message.delete().catch(() => {});
     }
 });
+
+client.on('interactionCreate', async interaction => {
+    // If the interaction isn't a button press, ignore it
+    if (!interaction.isButton()) return;
+
+    // Check which button was pressed and reply
+    if (interaction.customId === 'btn_intro') {
+        await interaction.reply({ content: 'Welcome to the Intro! (We will add more text here later)', ephemeral: true });
+    } 
+    else if (interaction.customId === 'btn_rules') {
+        await interaction.reply({ content: 'Here are the Rules! (We will add more text here later)', ephemeral: true });
+    } 
+    else if (interaction.customId === 'btn_start') {
+        await interaction.reply({ content: 'Let us get started! Use /addtask to add a task.', ephemeral: true });
+    } 
+    else if (interaction.customId === 'btn_help') {
+        await interaction.reply({ content: 'Need help? Here are the commands...', ephemeral: true });
+    }
+});
