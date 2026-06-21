@@ -70,16 +70,16 @@ client.on('interactionCreate', async interaction => {
         
         // Help Button
         if (interaction.customId === 'help_btn') {
-            // REPLACE THIS ID!
-            await interaction.reply({ content: 'Click here to join the discussion: <1518218058504736898>', ephemeral: true });
+            // Fixed: Added the missing # symbol inside the angle brackets
+            await interaction.reply({ content: 'Click here to join the discussion: <#1518218058504736898>', ephemeral: true });
         } 
         
         // Contact Support Button
         else if (interaction.customId === 'support_btn') {
             const token = Math.random().toString(36).substring(7).toUpperCase();
             
-            // REPLACE THIS ID!
-            const supportChannel = interaction.guild.channels.cache.get('#1518224380339949720');
+            // Fixed: Removed the # symbol inside the .get() method
+            const supportChannel = interaction.guild.channels.cache.get('1518224380339949720');
             if (supportChannel) {
                 supportChannel.send(`🔔 **New Support Request**\nUser: <@${interaction.user.id}>\nToken: **${token}**`);
             }
