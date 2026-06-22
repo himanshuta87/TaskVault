@@ -6,7 +6,7 @@ const {
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
-    PermissionFlagsOverwrites, 
+    PermissionFlagsBits, 
     ChannelType 
 } = require('discord.js');
 const { supabase, searchDatabase } = require('./supabase');
@@ -298,8 +298,8 @@ client.on('interactionCreate', async (interaction) => {
             name: `🎫-ticket-${interaction.user.username}`,
             type: ChannelType.GuildText,
             permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsOverwrites.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsOverwrites.ViewChannel, PermissionFlagsOverwrites.SendMessages] }
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
 
@@ -322,8 +322,8 @@ client.on('interactionCreate', async (interaction) => {
             name: `📤-upload-${interaction.user.username}`,
             type: ChannelType.GuildText,
             permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsOverwrites.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsOverwrites.ViewChannel, PermissionFlagsOverwrites.SendMessages] }
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
 
@@ -356,8 +356,8 @@ client.on('interactionCreate', async (interaction) => {
             name: `🔗-referral-${interaction.user.username}`,
             type: ChannelType.GuildText,
             permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsOverwrites.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsOverwrites.ViewChannel, PermissionFlagsOverwrites.SendMessages] }
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
 
