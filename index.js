@@ -357,8 +357,6 @@ client.on('interactionCreate', async (interaction) => {
         return await interaction.channel.delete().catch(() => {});
     }
 
-            .setColor('#2ecc71');
-
         const refControlRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('upload_grant_and_close').setLabel('✅ Verify Video & Grant 4 Days Access').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('❌ Deny & Close Room').setStyle(ButtonStyle.Danger)
