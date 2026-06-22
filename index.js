@@ -367,21 +367,33 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // ADMINISTRATIVE WORKSPACE MUTATION DELETION CONFIRMATIONS (YES/NO PROTECTION LABELS)
-    if (interaction.customId === 'ticket_admin_close_trigger' || interaction.customId === 'upload_grant_and_close') {
-        if (!interaction.member.permissions.has('Administrator')) {
-            return await interaction.reply({ content: '❌ System error: Access block restricted to Administrative clear tokens.', ephemeral: true });
-        }
+ 
+ // ADMINISTRATIVE WORKSPACE MUTATION DELETION
+if (interaction.customId === 'ticket_admin_close_trigger' || interaction.customId === 'upload_grant_and_close') {
+    if (!interaction.member.permissions.has('Administrator')) {
+        return await interaction.reply({ content: '❌ System error: Access restricted to authorized personnel.', ephemeral: true });
+    }
 
-        const actionType = interaction.customId;
-        const verificationEmbed = new EmbedBuilder()
-            .setTitle('🚨 Warning: Critical Destruction Sequence Flagged')
-            .setDescription('Are you completely sure you want to finalize this action and vanish this active room workspace channel completely from the network?')
-            .setColor('#e74c3c');
+    // This triggers the "Are you sure?" warning
+    return await interaction.reply({
+        content: '🚨 Warning: Critical Destruction Sequence Flagged\nAre you completely sure you want to finalize this action and vanish this active room workspace channel completely from the network?',
+        components: [
+            new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('Yes, Confirm Termination').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('No, Abort Sequence').setStyle(ButtonStyle.Success)
+            )
+        ],
+        ephemeral: true
+    });
+}
 
-        const verificationRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`confirm_yes_${actionType}`).setLabel('🔴 Yes, Confirm Termination').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No, Abort Sequence').setStyle(ButtonStyle.Success)
-        );
+// THE FINAL YES/NO DESTRUCTION TERMINATOR INTERCEPTOR
+if (interaction.customId === 'confirm_yes_delete') {
+    await interaction.reply({ content: '⚙️ Destruction authorization sequence confirmed. Channel clearing from active registry...' });
+    await sleep(2000);
+    return await interaction.channel.delete().catch(() => {});
+}
+
 
         return await interaction.reply({ embeds: [verificationEmbed], components: [verificationRow], ephemeral: true });
     }
