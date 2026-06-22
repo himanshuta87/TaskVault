@@ -350,26 +350,13 @@ client.on('interactionCreate', async (interaction) => {
         return await interaction.reply({ content: `✅ Submissions workspace created. Access room: <#${uploadChannel.id}>`, ephemeral: true });
     }
 
-    // OPTION 3: REFERRAL MARKETING HOOK
-    if (interaction.customId === 'tier_referral_view') {
-        const referralChannel = await interaction.guild.channels.create({
-            name: `🔗-referral-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
-        });
+    // THE FINAL YES/NO DESTRUCTION TERMINATOR INTERCEPTORS
+    if (interaction.customId.startsWith('confirm_yes_')) {
+        await interaction.reply({ content: '⚙️ *Destruction authorization sequence confirmed. Channel clearing from active registry...*' });
+        await sleep(2000);
+        return await interaction.channel.delete().catch(() => {});
+    }
 
-        const refEmbed = new EmbedBuilder()
-            .setTitle('🔗 Strategic Affiliate Integration Pipeline')
-            .setDescription(
-                `Earn a **4-Day Premium Access Pass** instantly by connecting to our centralized network affiliate tracking loop:\n\n` +
-                `1️⃣ Click our tracking pipeline link directly: [Target Link](${REFERRAL_LINK})\n` +
-                `2️⃣ Alternatively, manually input bonus validation string code inside your JumpTask profile dashboard settings: \`${REFERRAL_CODE}\`\n` +
-                `3️⃣ **CRITICAL PRE-REQUISITE:** Upload your raw interface screen recording videos or visual screenshots demonstrating your application tracking mapping inside this terminal space below to trigger approval.\n\n` +
-                `👇 *Staff verification actions below:*`
-            )
             .setColor('#2ecc71');
 
         const refControlRow = new ActionRowBuilder().addComponents(
