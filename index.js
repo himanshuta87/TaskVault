@@ -141,6 +141,7 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+
 // --- COMPONENT INTERACTION GATEWAY CONTROLLER ---
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
@@ -149,23 +150,21 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'funnel_step_1_start') {
         await interaction.reply({ content: '⚙️ *TaskVault is processing your registration parameters. Syncing databank nodes...*', ephemeral: true });
         
-        // Simulating the 10-second active pipeline build sequence
         await interaction.channel.sendTyping();
         await sleep(10000);
 
         const noticeEmbed = new EmbedBuilder()
             .setTitle('⚠️ CRITICAL COMPLIANCE NOTICE: Read everything below.')
-            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n[YOUR NORMAL GREETING & INFORMATION GOES HERE - YOU CAN FREELY PASTE AND EDIT THIS SPACE WITH YOUR SPECIFIC USER DETAILS LATER]\n\n⏳ *Security parsing active. Compliance unlock options initializing in 20 seconds.*`)
+            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n[YOUR NORMAL GREETING & INFORMATION GOES HERE]\n\n⏳ *Security parsing active. Compliance unlock options initializing in 20 seconds.*`)
             .setColor('#ff3333');
 
-        const initialSetupMsg = await interaction.followUp({ embeds: [noticeEmbed], ephemeral: true });
+        await interaction.followUp({ embeds: [noticeEmbed], ephemeral: true });
 
-        // Enforcing the 20-second reading verification barrier
         await sleep(20000);
 
         const readyEmbed = new EmbedBuilder()
             .setTitle('⚠️ CRITICAL COMPLIANCE NOTICE: Read everything below.')
-            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n[YOUR NORMAL GREETING & INFORMATION GOES HERE - YOU CAN FREELY PASTE AND EDIT THIS SPACE WITH YOUR SPECIFIC USER DETAILS LATER]\n\n✅ *Compliance parsing complete. You may now advance to the rules segment.*`)
+            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n[YOUR NORMAL GREETING & INFORMATION GOES HERE]\n\n✅ *Compliance parsing complete. You may now advance to the rules segment.*`)
             .setColor('#ff3333');
 
         const rulesRow = new ActionRowBuilder().addComponents(
@@ -175,20 +174,17 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ embeds: [readyEmbed], components: [rulesRow] });
     }
 
-    // STAGE 3: THE RULES LAYOUT & PRO-TIPS WARNING BLOCKS
+    // STAGE 3: THE RULES LAYOUT
     if (interaction.customId === 'funnel_step_2_rules') {
         const rulesEmbed = new EmbedBuilder()
             .setTitle('⚖️ Core System Rules & Parameter Compliance')
             .setDescription(
-                `[YOUR NORMAL REVENUE PROTOCOLS AND PLATFORM RULES GO HERE - FILL THIS CELL LATER]\n\n` +
-                `🚨 **REDUNDANTLY CRITICAL WARNING:**\n` +
-                `If you do not follow these parameters explicitly, you will highly likely receive a prompt **PERMANENT BAN FROM JUMPTASK** due to anti-cheat system matching.\n\n` +
-                `💡 **PRO-TIPS LOCK CONFIGURATION:**\n` +
-                `*Pro-Tips are currently locked inside your layout.* These are highly guarded strategies compiled directly by the system Administrator to maximize verification payouts. **These configurations unlock completely upon purchasing a Premium Subscription pass.**`
+                `[YOUR RULES GO HERE]\n\n` +
+                `🚨 **REDUNDANTLY CRITICAL WARNING:**\nIf you do not follow these parameters explicitly, you will highly likely receive a prompt **PERMANENT BAN FROM JUMPTASK**.\n\n` +
+                `💡 **PRO-TIPS LOCK CONFIGURATION:**\n*Pro-Tips unlock completely upon purchasing a Premium Subscription pass.*`
             )
             .setColor('#d63031');
 
-        // Check if user has already run free trial to display proper buttons
         const { data: sub } = await supabase.from('user_subscriptions').select('trial_uses, expires_at').eq('user_id', interaction.user.id).maybeSingle();
         const uses = sub ? (sub.trial_uses || 0) : 0;
         const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
@@ -215,28 +211,20 @@ client.on('interactionCreate', async (interaction) => {
         const uses = sub ? (sub.trial_uses || 0) : 0;
 
         if (uses >= 2) {
-            return await interaction.reply({ content: '❌ **Sandbox Usage Complete.** Your sandbox profile has already used its free credits. Please advance to the Premium Entry portal.', ephemeral: true });
+            return await interaction.reply({ content: '❌ **Sandbox Usage Complete.** Please advance to the Premium Entry portal.', ephemeral: true });
         }
 
         return await interaction.reply({ 
-            content: `🎉 **Sandbox Framework Initialized.** You possess exactly **${2 - uses} free database searches** remaining. Proceed directly to <#${GOOGLETASK_CHANNEL_ID}> to run queries!`, 
+            content: `🎉 **Sandbox Framework Initialized.** You possess exactly **${2 - uses} free database searches** remaining. Proceed directly to <#${GOOGLETASK_CHANNEL_ID}>!`, 
             ephemeral: true 
         });
     }
 
-    // THE 3 SUBSCRIPTION ACCESS SELECTION PANELS
+    // SUBSCRIPTION PORTAL
     if (interaction.customId === 'gateway_premium_portal') {
         const portalEmbed = new EmbedBuilder()
             .setTitle('💳 TaskVault Tier Authorization Portal')
-            .setDescription(
-                `Select your preferred structural gateway route below to authorize your active premium user file:\n\n` +
-                `🪙 **Option 1: Direct Crypto Route**\n` +
-                `Process secure checkout manually or use instant automated tracking QR matrices across BNB, JMPT, SOL networks.\n\n` +
-                `📤 **Option 2: Crowdsource Data Extraction**\n` +
-                `Mine new verified data and map missing configurations to earn standard day passes entirely free.\n\n` +
-                `🔗 **Option 3: Affiliate Referral Pipelines**\n` +
-                `TaskVault speaks: If you do not have active crypto allocations yet, not a problem! You can easily leverage our affiliate referral loop to earn a 4-day premium pass instantly.`
-            )
+            .setDescription(`Select your preferred route below:\n\n🪙 **Option 1: Crypto Checkout**\n📤 **Option 2: Earn Via Uploads**\n🔗 **Option 3: Affiliate Referral Pipelines**`)
             .setColor('#6c5ce7');
 
         const portalRow = new ActionRowBuilder().addComponents(
@@ -248,51 +236,32 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [portalEmbed], components: [portalRow], ephemeral: true });
     }
 
-    // OPTION 1: CRYPTO MANAGEMENT INTEGRATION
+    // CRYPTO VIEW
     if (interaction.customId === 'tier_crypto_view') {
         const cryptoEmbed = new EmbedBuilder()
             .setTitle('🪙 Crypto Network Direct Gateway')
-            .setDescription(
-                `You may complete your transaction manually by copying our corporate EVM network terminal block, or instantly utilize your mobile scanning wallet to map any of our automated asset packages.\n\n` +
-                `📌 **Terminal EVM Wallet Target:**\n\`${WALLET_ADDRESS}\` *(Click to auto-copy on mobile)*\n\n` +
-                `👇 **Select an Asset / Access Duration Package to pull your payment QR parameters:**`
-            )
+            .setDescription(`📌 **Terminal EVM Wallet Target:**\n\`${WALLET_ADDRESS}\`\n\n👇 **Select an Asset / Access Duration Package:**`)
             .setColor('#f1c40f');
 
         const qrTierSelectorRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('qr_package_1d').setLabel('1 Day Pass').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_2d').setLabel('2 Day Pass').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('qr_package_4d').setLabel('4 Day Pass').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_7d').setLabel('7 Day Pass').setStyle(ButtonStyle.Secondary)
-        );
-        const qrTierSelectorRow2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('qr_package_14d').setLabel('14 Day Pass').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_30d').setLabel('30 Day Pass').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_any').setLabel('✨ Open/Custom Amount QR').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('qr_package_any').setLabel('✨ Custom Amount QR').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 I Have Sent Payment').setStyle(ButtonStyle.Success)
         );
 
-        await interaction.reply({ embeds: [cryptoEmbed], components: [qrTierSelectorRow, qrTierSelectorRow2], ephemeral: true });
+        await interaction.reply({ embeds: [cryptoEmbed], components: [qrTierSelectorRow], ephemeral: true });
     }
 
-    // SUB-LOGIC: SERVING QR SELECTIONS STATIC FILE STORAGE PATHS
     if (interaction.customId.startsWith('qr_package_')) {
         const selectedTier = interaction.customId.split('_')[2];
-        const responseEmbed = new EmbedBuilder().setColor('#f39c12');
-        
-        if (selectedTier === 'any') {
-            responseEmbed.setTitle('✨ Open Network Custom Allocation QR')
-                .setDescription(`Scan this specific signature code template to manually declare your own transaction payload amount directly to wallet destination \`${WALLET_ADDRESS}\`.`);
-        } else {
-            responseEmbed.setTitle(`📊 Automated ${selectedTier.toUpperCase()} Package Tracking QR`)
-                .setDescription(`This QR auto-encrypts your target address registry and set pricing parameter context for the **${selectedTier} premium authorization plan**.\n\n*Scan via your primary decentralized wallet application to confirm.*`);
-        }
-        
-        // Return context layout holding your static image attachments mapping
-        return await interaction.reply({ embeds: [responseEmbed], content: `📁 *[PLACEHOLDER LINK TO YOUR UPLOADED QR_IMAGE_FOR_${selectedTier.toUpperCase()} HERE]*`, ephemeral: true });
+        const responseEmbed = new EmbedBuilder().setColor('#f39c12')
+            .setTitle(`📊 QR Template Package`)
+            .setDescription(`Scan via your primary decentralized wallet application.`);
+        return await interaction.reply({ embeds: [responseEmbed], content: `📁 *[PLACEHOLDER LINK TO YOUR UPLOADED QR IMAGE]*`, ephemeral: true });
     }
 
-    // SUB-LOGIC: PRIVATE CRYPTO TICKET HANDLERS
+    // TICKET CREATION LOGIC (FIXED PERMISSIONS ERROR)
     if (interaction.customId === 'crypto_open_ticket') {
         const ticketChannel = await interaction.guild.channels.create({
             name: `🎫-ticket-${interaction.user.username}`,
@@ -303,20 +272,12 @@ client.on('interactionCreate', async (interaction) => {
             ]
         });
 
-        const controlEmbed = new EmbedBuilder()
-            .setTitle('🎫 Billing Payment Verification Ticket')
-            .setDescription(`Hello <@${interaction.user.id}>. Provide your tx hash string values or copy-paste verification pictures directly here for staff verification processing.`)
-            .setColor('#2ecc71');
-
-        const closeRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close & Vanish Ticket Channel').setStyle(ButtonStyle.Danger)
-        );
-
+        const controlEmbed = new EmbedBuilder().setTitle('🎫 Payment Verification').setDescription(`Provide your tx hash string values or screenshots here.`).setColor('#2ecc71');
+        const closeRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close & Vanish Ticket').setStyle(ButtonStyle.Danger));
         await ticketChannel.send({ embeds: [controlEmbed], components: [closeRow] });
-        return await interaction.reply({ content: `✅ Ticket channel built successfully. Complete validation steps here: <#${ticketChannel.id}>`, ephemeral: true });
+        return await interaction.reply({ content: `✅ Ticket built successfully: <#${ticketChannel.id}>`, ephemeral: true });
     }
 
-    // OPTION 2: EARN VIA UPLOADS (CROWDSOURCING HIDDEN MATRIX)
     if (interaction.customId === 'tier_upload_loop') {
         const uploadChannel = await interaction.guild.channels.create({
             name: `📤-upload-${interaction.user.username}`,
@@ -327,103 +288,60 @@ client.on('interactionCreate', async (interaction) => {
             ]
         });
 
-        const uploadEmbed = new EmbedBuilder()
-            .setTitle('📤 Crowdsourced Submission Pipeline Workspace')
-            .setDescription(
-                `Welcome to your data logging vault. You can upload media assets, screen recordings, or type textual text data rows to secure free manual day-passes.\n\n` +
-                `🚨 **REWARD STRUCTURE SCALE METRICS:**\n` +
-                `*   **5 New Databank Additions:** Receive 2 Days Free Premium Tier Access.\n` +
-                `*   **8 New Databank Additions:** Receive 4 Days Free Premium Tier Access.\n` +
-                `*   **40 Standard/Existing Verification Syncs:** Full Platform Subscription Pass Granted.\n\n` +
-                `🚫 **COMPLIANCE ALERT MATRIX:**\n` +
-                `Do not attempt to resubmit matching data profiles or clone media graphics. All operations checked manually by staff systems.\n\n` +
-                `👇 *Staff verification engines handle configurations below:*`
-            )
-            .setColor('#3498db');
-
+        const uploadEmbed = new EmbedBuilder().setTitle('📤 Crowdsourced Submission Pipeline').setDescription(`Upload data to secure free passes.`).setColor('#3498db');
         const uploadControlRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('upload_grant_and_close').setLabel('✅ Grant Subscription & Evaporate Channel').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('❌ Reject & Terminate Channel').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId('upload_grant_and_close').setLabel('✅ Verify & Close Channel').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('❌ Reject & Terminate').setStyle(ButtonStyle.Danger)
         );
-
         await uploadChannel.send({ embeds: [uploadEmbed], components: [uploadControlRow] });
-        return await interaction.reply({ content: `✅ Submissions workspace created. Access room: <#${uploadChannel.id}>`, ephemeral: true });
+        return await interaction.reply({ content: `✅ Submissions workspace created: <#${uploadChannel.id}>`, ephemeral: true });
     }
 
-    // THE FINAL YES/NO DESTRUCTION TERMINATOR INTERCEPTORS
-    if (interaction.customId.startsWith('confirm_yes_')) {
-        await interaction.reply({ content: '⚙️ *Destruction authorization sequence confirmed. Channel clearing from active registry...*' });
-        await sleep(2000);
-        return await interaction.channel.delete().catch(() => {});
-    }
+    if (interaction.customId === 'tier_referral_view') {
+        const referralChannel = await interaction.guild.channels.create({
+            name: `🔗-referral-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
+            ]
+        });
 
+        const refEmbed = new EmbedBuilder().setTitle('🔗 Strategic Affiliate Integration').setDescription(`1️⃣ Use Link: ${REFERRAL_LINK}\n2️⃣ Or Code: \`${REFERRAL_CODE}\`\n3️⃣ Upload proof below.`).setColor('#2ecc71');
         const refControlRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('upload_grant_and_close').setLabel('✅ Verify Video & Grant 4 Days Access').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('upload_grant_and_close').setLabel('✅ Verify & Close Channel').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('❌ Deny & Close Room').setStyle(ButtonStyle.Danger)
         );
-
         await referralChannel.send({ embeds: [refEmbed], components: [refControlRow] });
-        return await interaction.reply({ content: `✅ Referral pipeline channel constructed. Access room here: <#${referralChannel.id}>`, ephemeral: true });
+        return await interaction.reply({ content: `✅ Referral pipeline channel constructed: <#${referralChannel.id}>`, ephemeral: true });
     }
 
-    // ADMINISTRATIVE WORKSPACE MUTATION DELETION CONFIRMATIONS (YES/NO PROTECTION LABELS)
- 
- // ADMINISTRATIVE WORKSPACE MUTATION DELETION
-if (interaction.customId === 'ticket_admin_close_trigger' || interaction.customId === 'upload_grant_and_close') {
-    if (!interaction.member.permissions.has('Administrator')) {
-        return await interaction.reply({ content: '❌ System error: Access restricted to authorized personnel.', ephemeral: true });
-    }
-
-    // This triggers the "Are you sure?" warning
-    return await interaction.reply({
-        content: '🚨 Warning: Critical Destruction Sequence Flagged\nAre you completely sure you want to finalize this action and vanish this active room workspace channel completely from the network?',
-        components: [
-            new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('Yes, Confirm Termination').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('No, Abort Sequence').setStyle(ButtonStyle.Success)
-            )
-        ],
-        ephemeral: true
-    });
-}
-
-// THE FINAL YES/NO DESTRUCTION TERMINATOR INTERCEPTOR
-if (interaction.customId === 'confirm_yes_delete') {
-    await interaction.reply({ content: '⚙️ Destruction authorization sequence confirmed. Channel clearing from active registry...' });
-    await sleep(2000);
-    return await interaction.channel.delete().catch(() => {});
-}
-
-
-        return await interaction.reply({ embeds: [verificationEmbed], components: [verificationRow], ephemeral: true });
-    }
-
-    // THE FINAL YES/NO DESTRUCTION TERMINATOR INTERCEPTORS
-    if (interaction.customId.startsWith('confirm_yes_')) {
-        const actionContext = interaction.customId.replace('confirm_yes_', '');
-        
-        if (actionContext === 'upload_grant_and_close') {
-            // Locate user context from current channel mapping and auto grant parameters
-            const targetLogsId = interaction.channel.name.split('-')[2];
-            const foundUser = interaction.guild.members.cache.find(m => m.user.username.toLowerCase() === targetLogsId.toLowerCase());
-            
-            if (foundUser) {
-                const expiresAt = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(); // Defaulting automated award baseline parameters
-                await supabase.from('user_subscriptions').upsert({ user_id: foundUser.id, expires_at: expiresAt, trial_uses: 2 });
-                const billingTracker = interaction.guild.channels.cache.get(BILLING_LOGS_ID);
-                if (billingTracker) {
-                    billingTracker.send(`📤 **Crowdsource Verification Matrix Sync:** Granted access tracking parameters to user <@${foundUser.id}> via media crowdsourcing verification data.`);
-                }
-            }
+    // --- CLEAN DESTRUCTION LOGIC (NO AUTO GRANT, PERFECT SYNTAX) ---
+    if (interaction.customId === 'ticket_admin_close_trigger' || interaction.customId === 'upload_grant_and_close') {
+        if (!interaction.member.permissions.has('Administrator')) {
+            return await interaction.reply({ content: '❌ System error: Access restricted.', ephemeral: true });
         }
 
-        await interaction.reply({ content: '⚙️ *Destruction authorization sequence confirmed. Channel clearing from active registry...*' });
+        return await interaction.reply({
+            content: '🚨 **Warning: Critical Destruction Sequence Flagged**\nAre you sure you want to completely vanish this workspace channel from the server?',
+            components: [
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('🔴 Yes, Confirm Termination').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No, Abort Sequence').setStyle(ButtonStyle.Success)
+                )
+            ],
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === 'confirm_yes_delete') {
+        await interaction.reply({ content: '⚙️ Destruction authorization sequence confirmed. Channel clearing from active registry...' });
         await sleep(2000);
         return await interaction.channel.delete().catch(() => {});
     }
 
     if (interaction.customId === 'confirm_no_abort') {
-        return await interaction.reply({ content: '✅ *Destruction sequence aborted successfully. Target channel preserved.*', ephemeral: true });
+        return await interaction.reply({ content: '✅ Destruction sequence aborted successfully. Channel preserved.', ephemeral: true });
     }
 });
 
