@@ -52,13 +52,21 @@ client.on('messageCreate', async (message) => {
             )
             .setColor('#5865F2');
 
-        const row = new ActionRowBuilder().addComponents(
+        // Row 1: Primary Onboarding Action Controls
+        const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('funnel_step_1_start').setLabel('🚀 Initialize Onboarding').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Subscription Packages').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 Open Private Ticket').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId('contact_support_btn').setLabel('📩 Contact Support').setStyle(ButtonStyle.Primary)
         );
 
-        await message.channel.send({ embeds: [startEmbed], components: [row] });
+        // Row 2: Navigational Links & Community Streams
+        const row2 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setLabel('💬 Help (#chat)').setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${message.guild.id}/${CHAT_CHANNEL_ID}`),
+            new ButtonBuilder().setLabel('✈️ Telegram Channel').setStyle(ButtonStyle.Link).setURL('https://t.me/placeholder_link'),
+            new ButtonBuilder().setLabel('🟢 WhatsApp Channel').setStyle(ButtonStyle.Link).setURL('https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M')
+        );
+
+        await message.channel.send({ embeds: [startEmbed], components: [row1, row2] });
         await message.delete().catch(() => {});
         return;
     }
@@ -173,10 +181,102 @@ client.on('interactionCreate', async (interaction) => {
                 .setColor('#3498db');
             return await interaction.editReply({ embeds: [perfEmbed] });
         }
+
+        // --- NEW SLASH COMMAND: /userstat ---
+        if (interaction.commandName === 'userstat') {
+            await interaction.deferReply({ ephemeral: true });
+            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
+            
+            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
+            let hoursRemaining = 0;
+            if (isPremium) {
+                const timeLeft = new Date(sub.expires_at) - new Date();
+                hoursRemaining = Math.max(0, Math.ceil(timeLeft / (1000 * 60 * 60)));
+            }
+
+            // Fallback display if no subscription data exists
+            const subscriptionTier = isPremium ? "Premium Network Access" : "No Active Subscription";
+            const paymentMethod = isPremium ? "Method 1" : "None"; 
+
+            const embed = new EmbedBuilder()
+                .setTitle('📋 TaskVault Subscription Status')
+                .setColor('#0099ff')
+                .addFields(
+                    { name: 'Selected Subscription', value: subscriptionTier, inline: true },
+                    { name: 'Payment Method Used', value: paymentMethod, inline: true },
+                    { name: 'Time Remaining', value: hoursRemaining <= 0 ? '❌ Expired / Inactive' : `⏳ ${hoursRemaining} hour(s) left`, inline: false }
+                );
+
+            // Conditional Warning Trigger if subscription runs low (1 hour or less left)
+            if (isPremium && hoursRemaining <= 1) {
+                const warningMessage = "⚠️ **Your subscription expires in less than 1 hour! Please renew immediately.**";
+                const renewRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('🔄 Renew Subscription')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL('https://your_payment_gateway.com') 
+                );
+                return await interaction.editReply({ content: warningMessage, embeds: [embed], components: [renewRow] });
+            }
+            
+            return await interaction.editReply({ embeds: [embed] });
+        }
+
+        // --- NEW SLASH COMMAND: /userscore ---
+        if (interaction.commandName === 'userscore') {
+            await interaction.deferReply({ ephemeral: true });
+            const rate = 0.04;
+            const now = new Date();
+
+            // Fetches time-window records relative to standard Supabase 'created_at' configurations
+            const getHistoricalWindowCount = async (hours) => {
+                const filterDate = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
+                const { count } = await supabase.from('task_logs')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', interaction.user.id)
+                    .gte('created_at', filterDate);
+                return count || 0;
+            };
+
+            const [currentDay, day2, day4, day7, day30] = await Promise.all([
+                getHistoricalWindowCount(24),
+                getHistoricalWindowCount(48),
+                getHistoricalWindowCount(96),
+                getHistoricalWindowCount(168),
+                getHistoricalWindowCount(720)
+            ]);
+
+            const { count: allTime } = await supabase.from('task_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', interaction.user.id);
+
+            const scoreEmbed = new EmbedBuilder()
+                .setTitle('📊 TaskVault Performance Metric Ledger')
+                .setColor('#00ff00')
+                .setDescription(
+                    `**Current Day:** ${currentDay} tasks | **$${(currentDay * rate).toFixed(2)}**\n` +
+                    `**2 Days:** ${day2} tasks | **$${(day2 * rate).toFixed(2)}**\n` +
+                    `**4 Days:** ${day4} tasks | **$${(day4 * rate).toFixed(2)}**\n` +
+                    `**7 Days:** ${day7} tasks | **$${(day7 * rate).toFixed(2)}**\n` +
+                    `**30 Days:** ${day30} tasks | **$${(day30 * rate).toFixed(2)}**\n` +
+                    `**All-Time:** ${allTime || 0} tasks | **$${((allTime || 0) * rate).toFixed(2)}**`
+                )
+                .setFooter({ text: `All metrics evaluated at a baseline rate of $${rate} per action item.` });
+
+            return await interaction.editReply({ embeds: [scoreEmbed] });
+        }
     }
 
     // --- SECTION B: BUTTON INTERACTION HANDLERS ---
     if (!interaction.isButton()) return;
+
+    // NEW HANDLER: Instantly captures the Contact Support button to process image instructions
+    if (interaction.customId === 'contact_support_btn') {
+        return await interaction.reply({
+            content: "👋 **TaskVault Support Instructions**\n\nTo submit your verification details, transaction hashes, or questions, please send them directly right here.\n\n📸 **How to upload photos/proof:**\nLook at the bottom left of your screen next to the text entry bar. Tap the **`+` (plus) icon**, select the screenshots from your mobile gallery, and press send so our team can verify your tasks!",
+            ephemeral: true
+        });
+    }
 
     // STAGE 1 & 2: LOADING AND TIMER PROTECTION
     if (interaction.customId === 'funnel_step_1_start') {
@@ -252,7 +352,7 @@ client.on('interactionCreate', async (interaction) => {
         return await interaction.reply({ content: `🎉 **Trial Initialized.** You possess exactly **${2 - uses} free database searches** remaining. Proceed to <#${GOOGLETASK_CHANNEL_ID}>!`, ephemeral: true });
     }
 
-    // THE 3 SUBSCRIPTION OPTIONS PORTAL
+// THE 3 SUBSCRIPTION OPTIONS PORTAL
     if (interaction.customId === 'gateway_premium_portal') {
         const portalEmbed = new EmbedBuilder()
             .setTitle('💳 TaskVault Tier Authorization Portal')

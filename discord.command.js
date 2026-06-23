@@ -29,6 +29,14 @@ const commands = [
     {
         name: 'stats',
         description: 'Check your database statistics',
+    },
+    {
+        name: 'userstat',
+        description: 'Check your subscription details and remaining access time.'
+    },
+    {
+        name: 'userscore',
+        description: 'View your completed task milestones and calculated balance.'
     }
 ];
 
