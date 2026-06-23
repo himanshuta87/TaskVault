@@ -23,7 +23,7 @@ const client = new Client({
 const GOOGLETASK_CHANNEL_ID = '1518236682950934619'; 
 const UNANSWERED_CHANNEL_ID = '1518236790958325821';
 const BILLING_LOGS_ID = '1518224380339949720'; 
-const CHAT_CHANNEL_ID = 'REPLACE_WITH_YOUR_CHAT_CHANNEL_ID'; // <-- Put your public chat channel ID here
+const CHAT_CHANNEL_ID = 'REPLACE_WITH_YOUR_CHAT_CHANNEL_ID'; // <-- Paste your public community chat channel ID here
 const WALLET_ADDRESS = '0x777B89324A3dE1581f0070DE948d19DC7497d147';
 const REFERRAL_LINK = 'https://www.jumptask.io/r/wodarajysedi';
 const REFERRAL_CODE = 'wodarajysedi';
@@ -47,7 +47,7 @@ client.on('messageCreate', async (message) => {
                 `Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n` +
                 `💬 **Need Help?**\nTalk to each other and sort things out directly in <#${CHAT_CHANNEL_ID}>!\n\n` +
                 `📱 **TaskVault Updates WhatsApp**\nDaily updates are given here join here 👍\n[🔗 Click here to Join WhatsApp](https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M)\n\n` +
-                `✈️ **TaskVault Telegram**\n[Space for info we will add later]\n[🔗 Click here to Join Telegram](https://t.me/placeholder_link)\n\n` +
+                `✈️ **TaskVault Telegram**\nDaily trading alpha, system updates, and platform performance metrics.\n[🔗 Click here to Join Telegram](https://t.me/placeholder_link)\n\n` +
                 `➡️ **Select an option below to begin:**`
             )
             .setColor('#5865F2');
@@ -134,13 +134,51 @@ client.on('messageCreate', async (message) => {
 });
 
 
-
-
 // --- COMPONENT INTERACTION GATEWAY CONTROLLER ---
 client.on('interactionCreate', async (interaction) => {
+    
+    // --- SECTION A: SLASH COMMAND PROCESSING HANDLERS ---
+    if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'stats') {
+            await interaction.deferReply({ ephemeral: true });
+            const { count } = await supabase.from('task_logs').select('*', { count: 'exact', head: true });
+            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
+            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
+
+            const statsEmbed = new EmbedBuilder()
+                .setTitle('📊 TaskVault Engine Statistics')
+                .setDescription(
+                    `🤖 **Total Processed Database Logs:** \`${count || 0}\` items\n` +
+                    `💳 **Network Access Profile:** ${isPremium ? '`Premium Active Profile` ✨' : '`Standard Sandbox Level` 🔒'}`
+                )
+                .setColor('#f1c40f');
+            return await interaction.editReply({ embeds: [statsEmbed] });
+        }
+
+        if (interaction.commandName === 'myperformance') {
+            await interaction.deferReply({ ephemeral: true });
+            const { count } = await supabase.from('task_logs').select('*', { count: 'exact', head: true }).eq('user_id', interaction.user.id);
+            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at, trial_uses').eq('user_id', interaction.user.id).maybeSingle();
+            const uses = sub ? (sub.trial_uses || 0) : 0;
+            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
+
+            const perfEmbed = new EmbedBuilder()
+                .setTitle('📈 Your System Ledger Performance')
+                .setDescription(
+                    `👤 **Operator ID:** <@${interaction.user.id}>\n` +
+                    `🔍 **Your Complete Logged Inquiries:** \`${count || 0}\` tasks matched\n` +
+                    `⏳ **Free Allocations Expended:** \`${uses}/2\` trial uses\n` +
+                    `🛡️ **System Priority:** ${isPremium ? '`Premium Pipeline Core` ✅' : '`Restricted Authorization` 🛑'}`
+                )
+                .setColor('#3498db');
+            return await interaction.editReply({ embeds: [perfEmbed] });
+        }
+    }
+
+    // --- SECTION B: BUTTON INTERACTION HANDLERS ---
     if (!interaction.isButton()) return;
 
-    // STAGE 1 & 2: LOADING, GREETINGS AND TYPING DELAY WRAPPERS
+    // STAGE 1 & 2: LOADING AND TIMER PROTECTION
     if (interaction.customId === 'funnel_step_1_start') {
         await interaction.reply({ content: '⚙️ *TaskVault is processing your registration parameters. Syncing databank nodes...*', ephemeral: true });
         await interaction.channel.sendTyping();
@@ -167,18 +205,30 @@ client.on('interactionCreate', async (interaction) => {
 
     // STAGE 3: THE RULES LAYOUT
     if (interaction.customId === 'funnel_step_2_rules') {
-        const rulesEmbed = new EmbedBuilder()
-            .setTitle('⚖️ Core System Rules & Parameter Compliance')
-            .setDescription(
-                `[YOUR NORMAL RULES GO HERE - WE WILL ADD THIS LATER]\n\n` +
-                `🚨 **WARNING:**\nIf you don't follow these rules, you will probably get banned from JumpTask.\n\n` +
-                `💡 **PRO-TIPS LOCK:**\nPro-Tips are currently LOCKED. These are highly guarded tips made by the Admin to maximize your earnings. They will automatically unlock when you purchase a subscription.`
-            )
-            .setColor('#d63031');
-
         const { data: sub } = await supabase.from('user_subscriptions').select('trial_uses, expires_at').eq('user_id', interaction.user.id).maybeSingle();
         const uses = sub ? (sub.trial_uses || 0) : 0;
         const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
+
+        let rulesText = 
+            `1️⃣ **Single Identity Framework:** Do not combine multiple Discord accounts into one single JumpTask extraction link.\n` +
+            `2️⃣ **Automation Controls:** Do not implement unverified system plugins beside the TaskVault search engine.\n` +
+            `3️⃣ **Query Sanitization:** Avoid repetitive submission queries to avoid database strain.\n\n` +
+            `🚨 **WARNING:** Failing to comply with these baseline values can result in direct JumpTask system limits.\n\n`;
+
+        if (isPremium) {
+            rulesText += 
+                `💡 **PRO-TIPS UNLOCKED (Premium Asset Core Available):**\n` +
+                `• 🚀 **Peak Windows:** Submit high-tier micro-tasks between 12 AM and 4 AM UTC to reduce allocation congestion.\n` +
+                `• 💸 **Node Splitting:** Host JumpTask bandwidth processes across two isolated IP targets to compound rewards safely.\n` +
+                `• 🛡️ **Cache Clears:** Clean out local storage vectors before logging automated matching processes.`;
+        } else {
+            rulesText += `💡 **PRO-TIPS LOCK:**\nPro-Tips are currently LOCKED. These are highly guarded tips made by the Admin to maximize your earnings. They will automatically unlock when you purchase a subscription.`;
+        }
+
+        const rulesEmbed = new EmbedBuilder()
+            .setTitle('⚖️ Core System Rules & Parameter Compliance')
+            .setDescription(rulesText)
+            .setColor('#d63031');
 
         const navigationRow = new ActionRowBuilder();
         if (!isPremium && uses < 2) {
@@ -307,7 +357,7 @@ client.on('interactionCreate', async (interaction) => {
         return await interaction.reply({ content: `✅ Referral pipeline channel constructed: <#${referralChannel.id}>`, ephemeral: true });
     }
 
-    // --- 100% MANUAL DESTRUCTION LOGIC (NO AUTO-GRANT) ---
+    // --- 100% MANUAL DESTRUCTION LOGIC ---
     if (interaction.customId === 'ticket_admin_close_trigger') {
         if (!interaction.member.permissions.has('Administrator')) {
             return await interaction.reply({ content: '❌ System error: Access restricted.', ephemeral: true });
