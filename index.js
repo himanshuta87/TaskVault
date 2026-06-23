@@ -23,6 +23,7 @@ const client = new Client({
 const GOOGLETASK_CHANNEL_ID = '1518236682950934619'; 
 const UNANSWERED_CHANNEL_ID = '1518236790958325821';
 const BILLING_LOGS_ID = '1518224380339949720'; 
+const CHAT_CHANNEL_ID = 'REPLACE_WITH_YOUR_CHAT_CHANNEL_ID'; // <-- Put your public chat channel ID here
 const WALLET_ADDRESS = '0x777B89324A3dE1581f0070DE948d19DC7497d147';
 const REFERRAL_LINK = 'https://www.jumptask.io/r/wodarajysedi';
 const REFERRAL_CODE = 'wodarajysedi';
@@ -36,19 +37,25 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // --- SYSTEM ONBOARDING TRIGGER (WITH HELP & SUPPORT) ---
+    // --- SYSTEM ONBOARDING TRIGGER (WITH SOCIALS & CHAT) ---
     if (message.content === '!poststart') {
         if (!message.member.permissions.has('Administrator')) return;
 
         const startEmbed = new EmbedBuilder()
             .setTitle('🤖 Welcome to TaskVault System Control')
-            .setDescription('Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n➡️ **Select an option below to begin:**')
+            .setDescription(
+                `Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n` +
+                `💬 **Need Help?**\nTalk to each other and sort things out directly in <#${CHAT_CHANNEL_ID}>!\n\n` +
+                `📱 **TaskVault Updates WhatsApp**\nDaily updates are given here join here 👍\n[🔗 Click here to Join WhatsApp](https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M)\n\n` +
+                `✈️ **TaskVault Telegram**\n[Space for info we will add later]\n[🔗 Click here to Join Telegram](https://t.me/placeholder_link)\n\n` +
+                `➡️ **Select an option below to begin:**`
+            )
             .setColor('#5865F2');
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('funnel_step_1_start').setLabel('🚀 Initialize Onboarding').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Subscription Packages').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 Contact Support').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 Open Private Ticket').setStyle(ButtonStyle.Primary)
         );
 
         await message.channel.send({ embeds: [startEmbed], components: [row] });
@@ -210,7 +217,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [portalEmbed], components: [portalRow], ephemeral: true });
     }
 
-    // 🪙 OPTION 1: CRYPTO MATRIX (SPLIT INTO 2 ROWS)
+    // 🪙 OPTION 1: CRYPTO MATRIX
     if (interaction.customId === 'tier_crypto_view') {
         const cryptoEmbed = new EmbedBuilder()
             .setTitle('🪙 Crypto Network Direct Gateway')
