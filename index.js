@@ -28,11 +28,58 @@ const WALLET_ADDRESS = '0x777B89324A3dE1581f0070DE948d19DC7497d147';
 const REFERRAL_LINK = 'https://www.jumptask.io/r/wodarajysedi';
 const REFERRAL_CODE = 'wodarajysedi';
 
+// --- BACKGROUND EXPIRATION ALERTS ---
+const notifiedUsers = new Set();
+
 client.once('ready', () => {
     console.log(`🚀 TaskVault V2 Core Engine Fully Online.`);
+
+    // Checks every 10 minutes for subscriptions expiring in less than 1 hour
+    setInterval(async () => {
+        const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        const nowIso = new Date().toISOString();
+        
+        const { data: expiringSubs } = await supabase.from('user_subscriptions')
+            .select('user_id, expires_at')
+            .gte('expires_at', nowIso)
+            .lte('expires_at', oneHourFromNow);
+            
+        if (expiringSubs) {
+            for (const sub of expiringSubs) {
+                if (!notifiedUsers.has(sub.user_id)) {
+                    try {
+                        const user = await client.users.fetch(sub.user_id);
+                        await user.send("⚠️ **TaskVault Alert:** Your subscription will expire in less than 1 hour! Please use the menu to renew your access.");
+                        notifiedUsers.add(sub.user_id); // Prevent spamming the same user
+                    } catch (err) { /* Ignore if user has DMs disabled */ }
+                }
+            }
+        }
+    }, 10 * 60 * 1000); 
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Helper Function for Command Timelines
+const categorizeTasks = (logs) => {
+    const counts = { current: 0, d2: 0, d4: 0, d7: 0, d14: 0, d30: 0, all: logs.length };
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    logs.forEach(log => {
+        // Fallback to now if created_at is missing, though Supabase should provide it
+        const logTime = log.created_at ? new Date(log.created_at).getTime() : now.getTime();
+        const diffDays = (now.getTime() - logTime) / (1000 * 60 * 60 * 24);
+
+        if (logTime >= startOfDay) counts.current++;
+        if (diffDays <= 2) counts.d2++;
+        if (diffDays <= 4) counts.d4++;
+        if (diffDays <= 7) counts.d7++;
+        if (diffDays <= 14) counts.d14++;
+        if (diffDays <= 30) counts.d30++;
+    });
+    return counts;
+};
 
 // --- MESSAGE CREATION HANDLER ---
 client.on('messageCreate', async (message) => {
@@ -53,44 +100,19 @@ client.on('messageCreate', async (message) => {
             new ButtonBuilder().setCustomId('open_support_ticket').setLabel('🎫 Contact Support').setStyle(ButtonStyle.Primary)
         );
 
-        // Link buttons to automatically open chats/websites
         const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setLabel('💬 Help (#chat)').setURL(`https://discord.com/channels/${message.guild.id}/${CHAT_CHANNEL_ID}`).setStyle(ButtonStyle.Link),
-            new ButtonBuilder().setLabel('✈️ TaskVault Telegram').setURL('https://t.me/TaskVault0fficial').setStyle(ButtonStyle.Link),
-            new ButtonBuilder().setLabel('📱 TaskVault WhatsApp').setURL('https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M').setStyle(ButtonStyle.Link)
+            new ButtonBuilder().setCustomId('btn_help_chat').setLabel('💬 Help (#chat)').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('btn_telegram').setLabel('✈️ TaskVault Telegram').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('btn_whatsapp').setLabel('📱 TaskVault WhatsApp').setStyle(ButtonStyle.Secondary)
         );
 
         await message.channel.send({ 
-            content: `**TaskVault Official Socials:**\n✈️ **Telegram:** The best place to find daily JumpTask strategies, new high-paying task alerts, and fast system updates!\n📱 **WhatsApp:** Daily updates are given here, join here 👍`,
             embeds: [startEmbed], 
             components: [row1, row2] 
         });
         
         await message.delete().catch(() => {});
         return;
-    }
-
-    // --- ADMINISTRATIVE COMMANDS ---
-    if (message.content.startsWith('!grant')) {
-        if (!message.member.permissions.has('Administrator')) return;
-        const args = message.content.split(' ');
-        const targetUser = message.mentions.users.first();
-        const days = parseInt(args[2]);
-
-        if (!targetUser || isNaN(days)) return message.reply('❌ Format: `!grant @user <days>`');
-
-        const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from('user_subscriptions').upsert({ user_id: targetUser.id, expires_at: expiresAt, trial_uses: 2 });
-        return message.reply(`✅ Granted **${days} days** of tier-access to <@${targetUser.id}>.`);
-    }
-
-    if (message.content.startsWith('!checksub')) {
-        const targetUser = message.mentions.users.first() || message.author;
-        const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', targetUser.id).maybeSingle();
-
-        if (!sub || !sub.expires_at || new Date(sub.expires_at) < new Date()) return message.reply(`❌ User <@${targetUser.id}> has no active sub.`);
-        const daysLeft = Math.ceil((new Date(sub.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
-        return message.reply(`💳 <@${targetUser.id}> has **${daysLeft} days** remaining.`);
     }
 
     // --- CENTRAL CORE SEARCH ---
@@ -126,32 +148,115 @@ client.on('messageCreate', async (message) => {
 });
 
 
-
 // --- BUTTON AND COMMAND INTERACTION HANDLER ---
 client.on('interactionCreate', async (interaction) => {
     
-    // --- SLASH COMMANDS (Fixed to prevent "Did not respond" errors) ---
+    // --- SLASH COMMANDS HANDLING ---
     if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'stats' || interaction.commandName === 'myperformance') {
-            await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
+
+        // 📈 /myperformance - User & Admin
+        if (interaction.commandName === 'myperformance') {
+            const { data: logs } = await supabase.from('task_logs').select('created_at').eq('user_id', interaction.user.id);
+            if (!logs) return await interaction.editReply({ content: '❌ No tasks found.' });
             
-            let query = supabase.from('task_logs').select('*', { count: 'exact', head: true });
-            if (interaction.commandName === 'myperformance') {
-                query = query.eq('user_id', interaction.user.id);
-            }
-            
-            const { count } = await query;
+            const c = categorizeTasks(logs);
             const embed = new EmbedBuilder()
-                .setTitle(interaction.commandName === 'stats' ? '📊 System Stats' : '📈 Your Performance')
-                .setDescription(`Total Tasks Processed: \`${count || 0}\``)
-                .setColor('#f1c40f');
-                
+                .setTitle('📈 Your Performance Overview')
+                .setColor('#3498db')
+                .addFields(
+                    { name: '📅 Current Day', value: `\`${c.current}\` tasks | 💵 Earned: **$${(c.current * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '📅 2 Days', value: `\`${c.d2}\` tasks | 💵 Earned: **$${(c.d2 * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '📅 4 Days', value: `\`${c.d4}\` tasks | 💵 Earned: **$${(c.d4 * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '📅 7 Days', value: `\`${c.d7}\` tasks | 💵 Earned: **$${(c.d7 * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '📅 14 Days', value: `\`${c.d14}\` tasks | 💵 Earned: **$${(c.d14 * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '📅 30 Days', value: `\`${c.d30}\` tasks | 💵 Earned: **$${(c.d30 * 0.04).toFixed(2)}**`, inline: false },
+                    { name: '♾️ All Time', value: `\`${c.all}\` tasks | 💵 Earned: **$${(c.all * 0.04).toFixed(2)}**`, inline: false }
+                );
             return await interaction.editReply({ embeds: [embed] });
         }
+
+        // 🌍 /viewall - Admin Only
+        if (interaction.commandName === 'viewall') {
+            if (!interaction.member.permissions.has('Administrator')) return await interaction.editReply({ content: '❌ You do not have access to system-wide analytics.' });
+            
+            const { data: logs } = await supabase.from('task_logs').select('created_at');
+            if (!logs) return await interaction.editReply({ content: '❌ No network data found.' });
+            
+            const c = categorizeTasks(logs);
+            const embed = new EmbedBuilder()
+                .setTitle('🌍 Global Network Performance')
+                .setDescription('Combined task metrics for ALL users.')
+                .setColor('#9b59b6')
+                .addFields(
+                    { name: '📅 Current Day', value: `Total: \`${c.current}\` tasks`, inline: true },
+                    { name: '📅 2 Days', value: `Total: \`${c.d2}\` tasks`, inline: true },
+                    { name: '📅 4 Days', value: `Total: \`${c.d4}\` tasks`, inline: true },
+                    { name: '📅 7 Days', value: `Total: \`${c.d7}\` tasks`, inline: true },
+                    { name: '📅 14 Days', value: `Total: \`${c.d14}\` tasks`, inline: true },
+                    { name: '📅 30 Days', value: `Total: \`${c.d30}\` tasks`, inline: true },
+                    { name: '♾️ All Time', value: `Total: \`${c.all}\` tasks`, inline: true }
+                );
+            return await interaction.editReply({ embeds: [embed] });
+        }
+
+        // 💳 /stats - Shows Subscription info
+        if (interaction.commandName === 'stats') {
+            const { data: sub } = await supabase.from('user_subscriptions').select('*').eq('user_id', interaction.user.id).maybeSingle();
+            
+            if (!sub || !sub.expires_at) {
+                return await interaction.editReply({ 
+                    content: '❌ You do not have an active subscription record.',
+                    components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('Purchase Subscription').setStyle(ButtonStyle.Success))]
+                });
+            }
+
+            const expiresAt = new Date(sub.expires_at);
+            const purchasedAt = sub.created_at ? new Date(sub.created_at) : new Date(expiresAt.getTime() - (1000 * 60 * 60 * 24 * 30)); // Fallback if no creation date
+            const isExpired = expiresAt < new Date();
+            
+            const embed = new EmbedBuilder()
+                .setTitle('💳 TaskVault Subscription Status')
+                .setColor(isExpired ? '#e74c3c' : '#2ecc71')
+                .addFields(
+                    { name: '📦 Plan Name', value: 'Premium Tier Access', inline: false },
+                    { name: '🛒 Purchased On', value: `<t:${Math.floor(purchasedAt.getTime() / 1000)}:D>`, inline: true },
+                    { name: '⏳ Expiration Date', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:D>`, inline: true },
+                    { name: '⏰ Time Remaining', value: isExpired ? '**EXPIRED**' : `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: false }
+                );
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('🔄 Renew Subscription').setStyle(ButtonStyle.Primary)
+            );
+            return await interaction.editReply({ embeds: [embed], components: [row] });
+        }
+
+        return await interaction.editReply({ content: "Command processed." }).catch(() => {});
     }
 
-    // If it's not a button, stop here.
     if (!interaction.isButton()) return;
+
+    // --- INFO BUTTONS (Help, Telegram, WhatsApp) ---
+    if (interaction.customId === 'btn_help_chat') {
+        return await interaction.reply({
+            content: `**Need Help?**\nTalk to each other and sort things out directly in our chat channel.\n👉 **Click here to enter:** <#${CHAT_CHANNEL_ID}>`,
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === 'btn_telegram') {
+        return await interaction.reply({
+            content: `**TaskVault Telegram**\nDaily JumpTask strategies, new high-paying task alerts, and fast system updates!\n🔗 **Click here to Join:** https://t.me/TaskVault0fficial`,
+            ephemeral: true
+        });
+    }
+
+    if (interaction.customId === 'btn_whatsapp') {
+        return await interaction.reply({
+            content: `**TaskVault WhatsApp**\nDaily updates are given here, join here 👍\n🔗 **Click here to Join:** https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M`,
+            ephemeral: true
+        });
+    }
 
     // --- ONBOARDING STAGES ---
     if (interaction.customId === 'funnel_step_1_start') {
@@ -165,7 +270,7 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.customId === 'funnel_step_2_rules') {
         const rulesEmbed = new EmbedBuilder()
-            .setTitle('⚖️ Core System Rules')
+            .setTitle('⚖️ TaskVault Rules')
             .setDescription(`1️⃣ Do not combine multiple Discord accounts.\n2️⃣ Do not use unverified plugins.\n\n💡 **PRO-TIPS LOCK:** Locked. Purchase a sub to reveal Admin pro-tips!`)
             .setColor('#d63031');
 
@@ -195,12 +300,11 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [portalEmbed], components: [portalRow], ephemeral: true });
     }
 
-    // 🪙 OPTION 1: CRYPTO
+    // 🪙 OPTION 1: CRYPTO (RESTORED BUTTON PRICING)
     if (interaction.customId === 'tier_crypto_view') {
         const cryptoEmbed = new EmbedBuilder()
             .setTitle('🪙 Crypto Checkout')
             .setDescription(
-                `📌 **Manual Wallet Address:**\n\`${WALLET_ADDRESS}\`\n\n` +
                 `*After pay click 'Upload Proof' below. Soon admin check and grant you access.*\n\n` +
                 `💡 **Tip:** Try to do "updating soon" tasks! It helps a lot and you can get a subscription too by uploading them.\n\n` +
                 `👇 **Select a Package (BNB, SOL, JMPT, USDT, USDC):**`
@@ -219,7 +323,13 @@ client.on('interactionCreate', async (interaction) => {
             new ButtonBuilder().setCustomId('open_support_ticket').setLabel('📤 Upload Proof').setStyle(ButtonStyle.Success)
         );
 
-        await interaction.reply({ embeds: [cryptoEmbed], components: [row1, row2], ephemeral: true });
+        // Kept the wallet out of the embed block so it can be easily copied!
+        await interaction.reply({ 
+            content: `📌 **Manual Wallet Address (Long-press to copy):**\n${WALLET_ADDRESS}`,
+            embeds: [cryptoEmbed], 
+            components: [row1, row2], 
+            ephemeral: true 
+        });
     }
 
     if (interaction.customId.startsWith('qr_package_')) {
