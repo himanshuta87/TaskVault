@@ -36,17 +36,19 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // --- SYSTEM ONBOARDING TRIGGER ---
+    // --- SYSTEM ONBOARDING TRIGGER (WITH HELP & SUPPORT) ---
     if (message.content === '!poststart') {
         if (!message.member.permissions.has('Administrator')) return;
 
         const startEmbed = new EmbedBuilder()
             .setTitle('🤖 Welcome to TaskVault System Control')
-            .setDescription('Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n➡️ **Click the button below to initiate your system onboarding configuration layout.**')
+            .setDescription('Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n➡️ **Select an option below to begin:**')
             .setColor('#5865F2');
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('funnel_step_1_start').setLabel('🚀 Initialize TaskVault Onboarding').setStyle(ButtonStyle.Success)
+            new ButtonBuilder().setCustomId('funnel_step_1_start').setLabel('🚀 Initialize Onboarding').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Subscription Packages').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 Contact Support').setStyle(ButtonStyle.Primary)
         );
 
         await message.channel.send({ embeds: [startEmbed], components: [row] });
@@ -208,7 +210,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [portalEmbed], components: [portalRow], ephemeral: true });
     }
 
-    // 🪙 OPTION 1: CRYPTO MATRIX (SPLIT INTO 2 ROWS FOR 8 BUTTONS)
+    // 🪙 OPTION 1: CRYPTO MATRIX (SPLIT INTO 2 ROWS)
     if (interaction.customId === 'tier_crypto_view') {
         const cryptoEmbed = new EmbedBuilder()
             .setTitle('🪙 Crypto Network Direct Gateway')
@@ -246,13 +248,13 @@ client.on('interactionCreate', async (interaction) => {
                 { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
-        const controlEmbed = new EmbedBuilder().setTitle('🎫 Payment Verification').setDescription(`Provide your tx hash string values or screenshots here.`).setColor('#2ecc71');
+        const controlEmbed = new EmbedBuilder().setTitle('🎫 Verification & Support').setDescription(`Provide your tx hash string values, screenshots, or questions here.`).setColor('#2ecc71');
         const closeRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger));
         await ticketChannel.send({ embeds: [controlEmbed], components: [closeRow] });
         return await interaction.reply({ content: `✅ Ticket built successfully: <#${ticketChannel.id}>`, ephemeral: true });
     }
 
-    // 📤 OPTION 2: EARN VIA UPLOADS (REWARD SCALE ADDED)
+    // 📤 OPTION 2: EARN VIA UPLOADS
     if (interaction.customId === 'tier_upload_loop') {
         const uploadChannel = await interaction.guild.channels.create({
             name: `📤-upload-${interaction.user.username}`,
@@ -305,11 +307,11 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         return await interaction.reply({
-            content: '🚨 **Warning: Critical Destruction Sequence**\nAre you sure you want to close this channel? (Yes/No)',
+            content: '🚨 **Warning: Critical Destruction Sequence**\nAre you sure you want to completely delete and close this channel? (Yes/No)',
             components: [
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('🔴 Yes').setStyle(ButtonStyle.Danger),
-                    new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No').setStyle(ButtonStyle.Success)
+                    new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('🔴 Yes, Delete').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No, Cancel').setStyle(ButtonStyle.Success)
                 )
             ],
             ephemeral: true
