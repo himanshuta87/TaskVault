@@ -23,7 +23,7 @@ const client = new Client({
 const GOOGLETASK_CHANNEL_ID = '1518236682950934619'; 
 const UNANSWERED_CHANNEL_ID = '1518236790958325821';
 const BILLING_LOGS_ID = '1518224380339949720'; 
-const CHAT_CHANNEL_ID = 'REPLACE_WITH_YOUR_CHAT_CHANNEL_ID'; // <-- Paste your public community chat channel ID here
+const CHAT_CHANNEL_ID = '123456789012345678'; // <-- PUT YOUR ACTUAL CHAT CHANNEL ID HERE
 const WALLET_ADDRESS = '0x777B89324A3dE1581f0070DE948d19DC7497d147';
 const REFERRAL_LINK = 'https://www.jumptask.io/r/wodarajysedi';
 const REFERRAL_CODE = 'wodarajysedi';
@@ -34,44 +34,43 @@ client.once('ready', () => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// --- MESSAGE CREATION HANDLER ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // --- SYSTEM ONBOARDING TRIGGER (WITH SOCIALS & CHAT) ---
+    // --- SYSTEM ONBOARDING TRIGGER (!poststart) ---
     if (message.content === '!poststart') {
         if (!message.member.permissions.has('Administrator')) return;
 
         const startEmbed = new EmbedBuilder()
-            .setTitle('🤖 Welcome to TaskVault System Control')
-            .setDescription(
-                `Your ultimate automation hub for bypassing micro-task grinds and scaling your earnings instantly.\n\n` +
-                `💬 **Need Help?**\nTalk to each other and sort things out directly in <#${CHAT_CHANNEL_ID}>!\n\n` +
-                `📱 **TaskVault Updates WhatsApp**\nDaily updates are given here join here 👍\n[🔗 Click here to Join WhatsApp](https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M)\n\n` +
-                `✈️ **TaskVault Telegram**\nDaily trading alpha, system updates, and platform performance metrics.\n[🔗 Click here to Join Telegram](https://t.me/placeholder_link)\n\n` +
-                `➡️ **Select an option below to begin:**`
-            )
+            .setTitle('🤖 Welcome to TaskVault')
+            .setDescription('➡️ **Select an option below to begin:**')
             .setColor('#5865F2');
 
-        // Row 1: Primary Onboarding Action Controls
         const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('funnel_step_1_start').setLabel('🚀 Initialize Onboarding').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Subscription Packages').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('contact_support_btn').setLabel('📩 Contact Support').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId('open_support_ticket').setLabel('🎫 Contact Support').setStyle(ButtonStyle.Primary)
         );
 
-        // Row 2: Navigational Links & Community Streams
+        // Link buttons to automatically open chats/websites
         const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setLabel('💬 Help (#chat)').setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${message.guild.id}/${CHAT_CHANNEL_ID}`),
-            new ButtonBuilder().setLabel('✈️ Telegram Channel').setStyle(ButtonStyle.Link).setURL('https://t.me/placeholder_link'),
-            new ButtonBuilder().setLabel('🟢 WhatsApp Channel').setStyle(ButtonStyle.Link).setURL('https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M')
+            new ButtonBuilder().setLabel('💬 Help (#chat)').setURL(`https://discord.com/channels/${message.guild.id}/${CHAT_CHANNEL_ID}`).setStyle(ButtonStyle.Link),
+            new ButtonBuilder().setLabel('✈️ TaskVault Telegram').setURL('https://t.me/TaskVault0fficial').setStyle(ButtonStyle.Link),
+            new ButtonBuilder().setLabel('📱 TaskVault WhatsApp').setURL('https://whatsapp.com/channel/0029VbCrux5GOj9k4swJmq2M').setStyle(ButtonStyle.Link)
         );
 
-        await message.channel.send({ embeds: [startEmbed], components: [row1, row2] });
+        await message.channel.send({ 
+            content: `**TaskVault Official Socials:**\n✈️ **Telegram:** The best place to find daily JumpTask strategies, new high-paying task alerts, and fast system updates!\n📱 **WhatsApp:** Daily updates are given here, join here 👍`,
+            embeds: [startEmbed], 
+            components: [row1, row2] 
+        });
+        
         await message.delete().catch(() => {});
         return;
     }
 
-    // --- ADMINISTRATIVE ACCOUNT MANAGEMENT COMMANDS ---
+    // --- ADMINISTRATIVE COMMANDS ---
     if (message.content.startsWith('!grant')) {
         if (!message.member.permissions.has('Administrator')) return;
         const args = message.content.split(' ');
@@ -82,31 +81,19 @@ client.on('messageCreate', async (message) => {
 
         const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         await supabase.from('user_subscriptions').upsert({ user_id: targetUser.id, expires_at: expiresAt, trial_uses: 2 });
-        return message.reply(`✅ **Premium Core Activated.** Granted **${days} days** of tier-access to <@${targetUser.id}>.`);
+        return message.reply(`✅ Granted **${days} days** of tier-access to <@${targetUser.id}>.`);
     }
 
     if (message.content.startsWith('!checksub')) {
         const targetUser = message.mentions.users.first() || message.author;
         const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', targetUser.id).maybeSingle();
 
-        if (!sub || !sub.expires_at || new Date(sub.expires_at) < new Date()) {
-            return message.reply(`❌ User <@${targetUser.id}> does not possess an active premium tier profile.`);
-        }
-        const timeLeft = new Date(sub.expires_at) - new Date();
-        const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-        return message.reply(`💳 **Subscription Manifest:** <@${targetUser.id}> has **${daysLeft} active days** remaining.`);
+        if (!sub || !sub.expires_at || new Date(sub.expires_at) < new Date()) return message.reply(`❌ User <@${targetUser.id}> has no active sub.`);
+        const daysLeft = Math.ceil((new Date(sub.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+        return message.reply(`💳 <@${targetUser.id}> has **${daysLeft} days** remaining.`);
     }
 
-    if (message.content.startsWith('!revokesub')) {
-        if (!message.member.permissions.has('Administrator')) return;
-        const targetUser = message.mentions.users.first();
-        if (!targetUser) return message.reply('❌ Please mention a valid target profile.');
-
-        await supabase.from('user_subscriptions').delete().eq('user_id', targetUser.id);
-        return message.reply(`🛑 **Authorization Revoked.** Subscription network permissions wiped for <@${targetUser.id}>.`);
-    }
-
-    // --- THE CENTRAL CORE SEARCH LIFECYCLE ---
+    // --- CENTRAL CORE SEARCH ---
     if (message.channel.id === GOOGLETASK_CHANNEL_ID) {
         const userQuery = message.content.trim();
         if (userQuery.length <= 3) return;
@@ -115,9 +102,7 @@ client.on('messageCreate', async (message) => {
         const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
         const trialCount = sub ? (sub.trial_uses || 0) : 0;
 
-        if (!isPremium && trialCount >= 2) {
-            return message.reply('🛑 **Access Boundary Reached.** Your 2 free trial queries have been exhausted. Please purchase a subscription to continue.');
-        }
+        if (!isPremium && trialCount >= 2) return message.reply('🛑 **Limit Reached.** Your 2 free searches are used up. Please purchase a subscription.');
 
         await message.channel.sendTyping();
         const answer = await searchDatabase(userQuery);
@@ -128,235 +113,78 @@ client.on('messageCreate', async (message) => {
             if (!isPremium) {
                 const newTrialCount = trialCount + 1;
                 await supabase.from('user_subscriptions').upsert({ user_id: message.author.id, trial_uses: newTrialCount });
-
-                const trialEmbed = new EmbedBuilder().setColor('#e67e22').setTitle('🔍 Task Located (Free Sandbox Runtime)').setDescription(`**Question:** ${userQuery}\n\n**Verified Solution:** ${answer}`).setFooter({ text: `TaskVault Sandbox System — Profile Credits Used: ${newTrialCount}/2` });
+                const trialEmbed = new EmbedBuilder().setColor('#e67e22').setTitle('🔍 Task Located').setDescription(`**Verified Solution:** ${answer}`).setFooter({ text: `Free Credits Used: ${newTrialCount}/2` });
                 await message.reply({ embeds: [trialEmbed] });
             } else {
-                const premiumEmbed = new EmbedBuilder().setColor('#00ffcc').setTitle('🔍 Solution Match Found').setDescription(`**Question:** ${userQuery}\n\n**Verified Solution:** ${answer}`).setFooter({ text: 'TaskVault Databank Operational Nodes' });
+                const premiumEmbed = new EmbedBuilder().setColor('#00ffcc').setTitle('🔍 Solution Match Found').setDescription(`**Verified Solution:** ${answer}`);
                 await message.reply({ embeds: [premiumEmbed] });
             }
         } else {
-            await message.reply({ content: '⏳ **This query signature is updating now.** The tracking team has been dispatched.' });
+            await message.reply({ content: '⏳ **This query signature is updating soon.** The tracking team has been dispatched.' });
         }
     }
 });
 
 
-// --- COMPONENT INTERACTION GATEWAY CONTROLLER ---
+
+// --- BUTTON AND COMMAND INTERACTION HANDLER ---
 client.on('interactionCreate', async (interaction) => {
     
-    // --- SECTION A: SLASH COMMAND PROCESSING HANDLERS ---
+    // --- SLASH COMMANDS (Fixed to prevent "Did not respond" errors) ---
     if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'stats') {
+        if (interaction.commandName === 'stats' || interaction.commandName === 'myperformance') {
             await interaction.deferReply({ ephemeral: true });
-            const { count } = await supabase.from('task_logs').select('*', { count: 'exact', head: true });
-            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
-            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
-
-            const statsEmbed = new EmbedBuilder()
-                .setTitle('📊 TaskVault Engine Statistics')
-                .setDescription(
-                    `🤖 **Total Processed Database Logs:** \`${count || 0}\` items\n` +
-                    `💳 **Network Access Profile:** ${isPremium ? '`Premium Active Profile` ✨' : '`Standard Sandbox Level` 🔒'}`
-                )
-                .setColor('#f1c40f');
-            return await interaction.editReply({ embeds: [statsEmbed] });
-        }
-
-        if (interaction.commandName === 'myperformance') {
-            await interaction.deferReply({ ephemeral: true });
-            const { count } = await supabase.from('task_logs').select('*', { count: 'exact', head: true }).eq('user_id', interaction.user.id);
-            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at, trial_uses').eq('user_id', interaction.user.id).maybeSingle();
-            const uses = sub ? (sub.trial_uses || 0) : 0;
-            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
-
-            const perfEmbed = new EmbedBuilder()
-                .setTitle('📈 Your System Ledger Performance')
-                .setDescription(
-                    `👤 **Operator ID:** <@${interaction.user.id}>\n` +
-                    `🔍 **Your Complete Logged Inquiries:** \`${count || 0}\` tasks matched\n` +
-                    `⏳ **Free Allocations Expended:** \`${uses}/2\` trial uses\n` +
-                    `🛡️ **System Priority:** ${isPremium ? '`Premium Pipeline Core` ✅' : '`Restricted Authorization` 🛑'}`
-                )
-                .setColor('#3498db');
-            return await interaction.editReply({ embeds: [perfEmbed] });
-        }
-
-        // --- NEW SLASH COMMAND: /userstat ---
-        if (interaction.commandName === 'userstat') {
-            await interaction.deferReply({ ephemeral: true });
-            const { data: sub } = await supabase.from('user_subscriptions').select('expires_at').eq('user_id', interaction.user.id).maybeSingle();
             
-            const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
-            let hoursRemaining = 0;
-            if (isPremium) {
-                const timeLeft = new Date(sub.expires_at) - new Date();
-                hoursRemaining = Math.max(0, Math.ceil(timeLeft / (1000 * 60 * 60)));
+            let query = supabase.from('task_logs').select('*', { count: 'exact', head: true });
+            if (interaction.commandName === 'myperformance') {
+                query = query.eq('user_id', interaction.user.id);
             }
-
-            // Fallback display if no subscription data exists
-            const subscriptionTier = isPremium ? "Premium Network Access" : "No Active Subscription";
-            const paymentMethod = isPremium ? "Method 1" : "None"; 
-
+            
+            const { count } = await query;
             const embed = new EmbedBuilder()
-                .setTitle('📋 TaskVault Subscription Status')
-                .setColor('#0099ff')
-                .addFields(
-                    { name: 'Selected Subscription', value: subscriptionTier, inline: true },
-                    { name: 'Payment Method Used', value: paymentMethod, inline: true },
-                    { name: 'Time Remaining', value: hoursRemaining <= 0 ? '❌ Expired / Inactive' : `⏳ ${hoursRemaining} hour(s) left`, inline: false }
-                );
-
-            // Conditional Warning Trigger if subscription runs low (1 hour or less left)
-            if (isPremium && hoursRemaining <= 1) {
-                const warningMessage = "⚠️ **Your subscription expires in less than 1 hour! Please renew immediately.**";
-                const renewRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setLabel('🔄 Renew Subscription')
-                        .setStyle(ButtonStyle.Link)
-                        .setURL('https://your_payment_gateway.com') 
-                );
-                return await interaction.editReply({ content: warningMessage, embeds: [embed], components: [renewRow] });
-            }
-            
+                .setTitle(interaction.commandName === 'stats' ? '📊 System Stats' : '📈 Your Performance')
+                .setDescription(`Total Tasks Processed: \`${count || 0}\``)
+                .setColor('#f1c40f');
+                
             return await interaction.editReply({ embeds: [embed] });
         }
-
-        // --- NEW SLASH COMMAND: /userscore ---
-        if (interaction.commandName === 'userscore') {
-            await interaction.deferReply({ ephemeral: true });
-            const rate = 0.04;
-            const now = new Date();
-
-            // Fetches time-window records relative to standard Supabase 'created_at' configurations
-            const getHistoricalWindowCount = async (hours) => {
-                const filterDate = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
-                const { count } = await supabase.from('task_logs')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', interaction.user.id)
-                    .gte('created_at', filterDate);
-                return count || 0;
-            };
-
-            const [currentDay, day2, day4, day7, day30] = await Promise.all([
-                getHistoricalWindowCount(24),
-                getHistoricalWindowCount(48),
-                getHistoricalWindowCount(96),
-                getHistoricalWindowCount(168),
-                getHistoricalWindowCount(720)
-            ]);
-
-            const { count: allTime } = await supabase.from('task_logs')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', interaction.user.id);
-
-            const scoreEmbed = new EmbedBuilder()
-                .setTitle('📊 TaskVault Performance Metric Ledger')
-                .setColor('#00ff00')
-                .setDescription(
-                    `**Current Day:** ${currentDay} tasks | **$${(currentDay * rate).toFixed(2)}**\n` +
-                    `**2 Days:** ${day2} tasks | **$${(day2 * rate).toFixed(2)}**\n` +
-                    `**4 Days:** ${day4} tasks | **$${(day4 * rate).toFixed(2)}**\n` +
-                    `**7 Days:** ${day7} tasks | **$${(day7 * rate).toFixed(2)}**\n` +
-                    `**30 Days:** ${day30} tasks | **$${(day30 * rate).toFixed(2)}**\n` +
-                    `**All-Time:** ${allTime || 0} tasks | **$${((allTime || 0) * rate).toFixed(2)}**`
-                )
-                .setFooter({ text: `All metrics evaluated at a baseline rate of $${rate} per action item.` });
-
-            return await interaction.editReply({ embeds: [scoreEmbed] });
-        }
     }
 
-    // --- SECTION B: BUTTON INTERACTION HANDLERS ---
+    // If it's not a button, stop here.
     if (!interaction.isButton()) return;
 
-    // NEW HANDLER: Instantly captures the Contact Support button to process image instructions
-    if (interaction.customId === 'contact_support_btn') {
-        return await interaction.reply({
-            content: "👋 **TaskVault Support Instructions**\n\nTo submit your verification details, transaction hashes, or questions, please send them directly right here.\n\n📸 **How to upload photos/proof:**\nLook at the bottom left of your screen next to the text entry bar. Tap the **`+` (plus) icon**, select the screenshots from your mobile gallery, and press send so our team can verify your tasks!",
-            ephemeral: true
-        });
-    }
-
-    // STAGE 1 & 2: LOADING AND TIMER PROTECTION
+    // --- ONBOARDING STAGES ---
     if (interaction.customId === 'funnel_step_1_start') {
-        await interaction.reply({ content: '⚙️ *TaskVault is processing your registration parameters. Syncing databank nodes...*', ephemeral: true });
+        await interaction.reply({ content: '⚙️ *Syncing databank nodes...*', ephemeral: true });
         await interaction.channel.sendTyping();
-        await sleep(10000);
-
-        const noticeEmbed = new EmbedBuilder()
-            .setTitle('⚠️ CRITICAL COMPLIANCE NOTICE: Read everything below.')
-            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n⏳ *Security parsing active. Compliance unlock options initializing in 20 seconds.*`)
-            .setColor('#ff3333');
-
-        await interaction.followUp({ embeds: [noticeEmbed], ephemeral: true });
-        await sleep(20000);
-
-        const readyEmbed = new EmbedBuilder()
-            .setTitle('⚠️ CRITICAL COMPLIANCE NOTICE: Read everything below.')
-            .setDescription(`Welcome to the TaskVault Ecosystem.\n\n✅ *Compliance parsing complete. You may now advance to the rules segment.*`)
-            .setColor('#ff3333');
-
-        const rulesRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('funnel_step_2_rules').setLabel('⚖️ Advance to Operational Rules').setStyle(ButtonStyle.Primary)
-        );
+        await sleep(3000); 
+        const readyEmbed = new EmbedBuilder().setTitle('⚠️ NOTICE').setDescription(`✅ *Compliance complete. Advance to rules.*`).setColor('#ff3333');
+        const rulesRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('funnel_step_2_rules').setLabel('⚖️ Advance to Rules').setStyle(ButtonStyle.Primary));
         await interaction.editReply({ embeds: [readyEmbed], components: [rulesRow] });
     }
 
-    // STAGE 3: THE RULES LAYOUT
     if (interaction.customId === 'funnel_step_2_rules') {
-        const { data: sub } = await supabase.from('user_subscriptions').select('trial_uses, expires_at').eq('user_id', interaction.user.id).maybeSingle();
-        const uses = sub ? (sub.trial_uses || 0) : 0;
-        const isPremium = sub && sub.expires_at && new Date(sub.expires_at) >= new Date();
-
-        let rulesText = 
-            `1️⃣ **Single Identity Framework:** Do not combine multiple Discord accounts into one single JumpTask extraction link.\n` +
-            `2️⃣ **Automation Controls:** Do not implement unverified system plugins beside the TaskVault search engine.\n` +
-            `3️⃣ **Query Sanitization:** Avoid repetitive submission queries to avoid database strain.\n\n` +
-            `🚨 **WARNING:** Failing to comply with these baseline values can result in direct JumpTask system limits.\n\n`;
-
-        if (isPremium) {
-            rulesText += 
-                `💡 **PRO-TIPS UNLOCKED (Premium Asset Core Available):**\n` +
-                `• 🚀 **Peak Windows:** Submit high-tier micro-tasks between 12 AM and 4 AM UTC to reduce allocation congestion.\n` +
-                `• 💸 **Node Splitting:** Host JumpTask bandwidth processes across two isolated IP targets to compound rewards safely.\n` +
-                `• 🛡️ **Cache Clears:** Clean out local storage vectors before logging automated matching processes.`;
-        } else {
-            rulesText += `💡 **PRO-TIPS LOCK:**\nPro-Tips are currently LOCKED. These are highly guarded tips made by the Admin to maximize your earnings. They will automatically unlock when you purchase a subscription.`;
-        }
-
         const rulesEmbed = new EmbedBuilder()
-            .setTitle('⚖️ Core System Rules & Parameter Compliance')
-            .setDescription(rulesText)
+            .setTitle('⚖️ Core System Rules')
+            .setDescription(`1️⃣ Do not combine multiple Discord accounts.\n2️⃣ Do not use unverified plugins.\n\n💡 **PRO-TIPS LOCK:** Locked. Purchase a sub to reveal Admin pro-tips!`)
             .setColor('#d63031');
 
-        const navigationRow = new ActionRowBuilder();
-        if (!isPremium && uses < 2) {
-            navigationRow.addComponents(
-                new ButtonBuilder().setCustomId('gateway_activate_trial').setLabel('🚀 Start Free Trial (2 Searches)').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Purchase Subscription').setStyle(ButtonStyle.Danger)
-            );
-        } else {
-            navigationRow.addComponents(
-                new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Purchase Subscription').setStyle(ButtonStyle.Danger)
-            );
-        }
+        const navigationRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('gateway_activate_trial').setLabel('🚀 Start Free Trial (2 Searches)').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('gateway_premium_portal').setLabel('💳 Purchase Subscription').setStyle(ButtonStyle.Danger)
+        );
         await interaction.reply({ embeds: [rulesEmbed], components: [navigationRow], ephemeral: true });
     }
 
-    // STAGE 4: FREE TRIAL PROCESSING
     if (interaction.customId === 'gateway_activate_trial') {
-        const { data: sub } = await supabase.from('user_subscriptions').select('trial_uses').eq('user_id', interaction.user.id).maybeSingle();
-        const uses = sub ? (sub.trial_uses || 0) : 0;
-        if (uses >= 2) return await interaction.reply({ content: '❌ **Trial Complete.** Please advance to the Premium Entry portal.', ephemeral: true });
-        return await interaction.reply({ content: `🎉 **Trial Initialized.** You possess exactly **${2 - uses} free database searches** remaining. Proceed to <#${GOOGLETASK_CHANNEL_ID}>!`, ephemeral: true });
+        return await interaction.reply({ content: `🎉 **Trial Initialized.** Proceed to <#${GOOGLETASK_CHANNEL_ID}>!`, ephemeral: true });
     }
 
-// THE 3 SUBSCRIPTION OPTIONS PORTAL
+    // --- SUBSCRIPTION PORTAL ---
     if (interaction.customId === 'gateway_premium_portal') {
         const portalEmbed = new EmbedBuilder()
-            .setTitle('💳 TaskVault Tier Authorization Portal')
-            .setDescription(`Select your preferred route below:\n\n🪙 **Option 1:** Crypto Checkout (QR/Manual)\n📤 **Option 2:** Earn Via Uploads (Crowdsourcing)\n🔗 **Option 3:** Affiliate Referrals (JumpTask)`)
+            .setTitle('💳 TaskVault Tier Portal')
+            .setDescription(`🪙 **Option 1:** Crypto Checkout\n📤 **Option 2:** Earn Via Uploads\n🔗 **Option 3:** Affiliate Referrals`)
             .setColor('#6c5ce7');
 
         const portalRow = new ActionRowBuilder().addComponents(
@@ -367,25 +195,28 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [portalEmbed], components: [portalRow], ephemeral: true });
     }
 
-    // 🪙 OPTION 1: CRYPTO MATRIX
+    // 🪙 OPTION 1: CRYPTO
     if (interaction.customId === 'tier_crypto_view') {
         const cryptoEmbed = new EmbedBuilder()
-            .setTitle('🪙 Crypto Network Direct Gateway')
-            .setDescription(`📌 **Terminal EVM Wallet Target:**\n\`${WALLET_ADDRESS}\` *(Click to auto-copy)*\n\n👇 **Select an Asset / Access Duration Package:**`)
+            .setTitle('🪙 Crypto Checkout')
+            .setDescription(
+                `📌 **Manual Wallet Address:**\n\`${WALLET_ADDRESS}\`\n\n` +
+                `*After pay click 'Upload Proof' below. Soon admin check and grant you access.*\n\n` +
+                `💡 **Tip:** Try to do "updating soon" tasks! It helps a lot and you can get a subscription too by uploading them.\n\n` +
+                `👇 **Select a Package (BNB, SOL, JMPT, USDT, USDC):**`
+            )
             .setColor('#f1c40f');
 
         const row1 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('qr_package_1d').setLabel('1 Day').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_2d').setLabel('2 Days').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_4d').setLabel('4 Days').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_7d').setLabel('7 Days').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_14d').setLabel('14 Days').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('qr_package_1d').setLabel('1 Day - $0.25').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('qr_package_2d').setLabel('2 Days - $0.40').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('qr_package_4d').setLabel('4 Days - $0.65').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('qr_package_7d').setLabel('7 Days - $1.05').setStyle(ButtonStyle.Secondary)
         );
-
         const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('qr_package_30d').setLabel('30 Days').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('qr_package_any').setLabel('✨ Custom Amount QR').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('crypto_open_ticket').setLabel('🎫 I Have Sent Payment').setStyle(ButtonStyle.Success)
+            new ButtonBuilder().setCustomId('qr_package_14d').setLabel('14 Days - $1.80').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('qr_package_30d').setLabel('30 Days - $3.30').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('open_support_ticket').setLabel('📤 Upload Proof').setStyle(ButtonStyle.Success)
         );
 
         await interaction.reply({ embeds: [cryptoEmbed], components: [row1, row2], ephemeral: true });
@@ -393,10 +224,48 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.customId.startsWith('qr_package_')) {
         const responseEmbed = new EmbedBuilder().setColor('#f39c12').setTitle(`📊 QR Template Package`).setDescription(`Scan via your primary decentralized wallet application.`);
-        return await interaction.reply({ embeds: [responseEmbed], content: `📁 *[PLACEHOLDER LINK TO YOUR UPLOADED QR IMAGE]*`, ephemeral: true });
+        return await interaction.reply({ embeds: [responseEmbed], content: `📁 *[QR IMAGE LINK HERE]*`, ephemeral: true });
     }
 
-    if (interaction.customId === 'crypto_open_ticket') {
+    // 📤 OPTION 2: UPLOADS
+    if (interaction.customId === 'tier_upload_loop') {
+        const uploadChannel = await interaction.guild.channels.create({
+            name: `📤-upload-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }, { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }]
+        });
+
+        const uploadEmbed = new EmbedBuilder()
+            .setTitle('📤 Earn Via Uploads')
+            .setDescription(
+                `If a task shows **"updating soon"**, you can search it manually, save that task, and upload it here! You can do one by one or collect 5 and get free subscription after checking.\n\n` +
+                `📊 **Reward Scale:**\n* 5 New Tasks = 2 Days Free\n* 8 New Tasks = 4 Days Free\n* 40 Existing Tasks = Sub Granted`
+            )
+            .setColor('#3498db');
+            
+        await uploadChannel.send({ embeds: [uploadEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close').setStyle(ButtonStyle.Danger))] });
+        return await interaction.reply({ content: `✅ Submissions workspace created: <#${uploadChannel.id}>`, ephemeral: true });
+    }
+
+    // 🔗 OPTION 3: REFERRAL
+    if (interaction.customId === 'tier_referral_view') {
+        const referralChannel = await interaction.guild.channels.create({
+            name: `🔗-referral-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }, { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }]
+        });
+
+        const refEmbed = new EmbedBuilder()
+            .setTitle('🔗 Affiliate Referral')
+            .setDescription(`Use our referral to get free access for 4 days.\n1️⃣ Use Link: ${REFERRAL_LINK}\n2️⃣ Or Code: \`${REFERRAL_CODE}\`\n\nUpload a screen recording of you doing it below.\n\n💡 **Tip:** When TaskVault gives "updating soon", try to find that task, save it, and grab a subscription!`)
+            .setColor('#2ecc71');
+            
+        await referralChannel.send({ embeds: [refEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close').setStyle(ButtonStyle.Danger))] });
+        return await interaction.reply({ content: `✅ Referral pipeline channel constructed: <#${referralChannel.id}>`, ephemeral: true });
+    }
+
+    // 🎫 SUPPORT TICKET GENERATION
+    if (interaction.customId === 'open_support_ticket') {
         const ticketChannel = await interaction.guild.channels.create({
             name: `🎫-ticket-${interaction.user.username}`,
             type: ChannelType.GuildText,
@@ -405,85 +274,33 @@ client.on('interactionCreate', async (interaction) => {
                 { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
-        const controlEmbed = new EmbedBuilder().setTitle('🎫 Verification & Support').setDescription(`Provide your tx hash string values, screenshots, or questions here.`).setColor('#2ecc71');
-        const closeRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger));
-        await ticketChannel.send({ embeds: [controlEmbed], components: [closeRow] });
-        return await interaction.reply({ content: `✅ Ticket built successfully: <#${ticketChannel.id}>`, ephemeral: true });
-    }
-
-    // 📤 OPTION 2: EARN VIA UPLOADS
-    if (interaction.customId === 'tier_upload_loop') {
-        const uploadChannel = await interaction.guild.channels.create({
-            name: `📤-upload-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
-        });
-
-        const uploadEmbed = new EmbedBuilder()
-            .setTitle('📤 Crowdsourced Submission Pipeline')
-            .setDescription(`Upload images, videos, and text to secure free passes.\n\n📊 **Reward Scale:**\n* 5 New Tasks = 2 Days Free\n* 8 New Tasks = 4 Days Free\n* 40 Existing/Standard Tasks = Subscription Granted\n\n🚫 **WARNING:** Do not send similar or duplicate tasks.`)
-            .setColor('#3498db');
-            
-        const uploadControlRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('✅ Grant Sub & Close').setStyle(ButtonStyle.Success)
-        );
-        await uploadChannel.send({ embeds: [uploadEmbed], components: [uploadControlRow] });
-        return await interaction.reply({ content: `✅ Submissions workspace created: <#${uploadChannel.id}>`, ephemeral: true });
-    }
-
-    // 🔗 OPTION 3: AFFILIATE REFERRAL
-    if (interaction.customId === 'tier_referral_view') {
-        const referralChannel = await interaction.guild.channels.create({
-            name: `🔗-referral-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
-        });
-
-        const refEmbed = new EmbedBuilder()
-            .setTitle('🔗 Strategic Affiliate Integration')
-            .setDescription(`If you don't have crypto yet, not a problem! You can still have premium. Use our referral to get free access for 4 days.\n\n1️⃣ Use Link: ${REFERRAL_LINK}\n2️⃣ Or Code: \`${REFERRAL_CODE}\`\n\nRegister or paste the code into the bonus field, and upload a screen recording of you doing it below.`)
+        
+        const controlEmbed = new EmbedBuilder()
+            .setTitle('🎫 TaskVault Support Ticket')
+            .setDescription(`Admin will check soon.\n\n**Your query:**\n*(Please type your questions or upload your payment proof below)*`)
             .setColor('#2ecc71');
             
-        const refControlRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('✅ Verify & Close Channel').setStyle(ButtonStyle.Success)
-        );
-        await referralChannel.send({ embeds: [refEmbed], components: [refControlRow] });
-        return await interaction.reply({ content: `✅ Referral pipeline channel constructed: <#${referralChannel.id}>`, ephemeral: true });
+        const closeRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_admin_close_trigger').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger));
+        await ticketChannel.send({ embeds: [controlEmbed], components: [closeRow] });
+        return await interaction.reply({ content: `✅ Support ticket opened: <#${ticketChannel.id}>`, ephemeral: true });
     }
 
-    // --- 100% MANUAL DESTRUCTION LOGIC ---
+    // --- MANUAL CHANNEL CLOSING ---
     if (interaction.customId === 'ticket_admin_close_trigger') {
-        if (!interaction.member.permissions.has('Administrator')) {
-            return await interaction.reply({ content: '❌ System error: Access restricted.', ephemeral: true });
-        }
-
+        if (!interaction.member.permissions.has('Administrator')) return await interaction.reply({ content: '❌ System error: Access restricted.', ephemeral: true });
         return await interaction.reply({
-            content: '🚨 **Warning: Critical Destruction Sequence**\nAre you sure you want to completely delete and close this channel? (Yes/No)',
-            components: [
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('🔴 Yes, Delete').setStyle(ButtonStyle.Danger),
-                    new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No, Cancel').setStyle(ButtonStyle.Success)
-                )
-            ],
+            content: '🚨 Delete and close this channel?',
+            components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('confirm_yes_delete').setLabel('🔴 Yes').setStyle(ButtonStyle.Danger), new ButtonBuilder().setCustomId('confirm_no_abort').setLabel('🟢 No').setStyle(ButtonStyle.Success))],
             ephemeral: true
         });
     }
 
     if (interaction.customId === 'confirm_yes_delete') {
-        await interaction.reply({ content: '⚙️ Destruction sequence confirmed. Closing channel...' });
-        await sleep(2000);
+        await interaction.reply({ content: '⚙️ Closing channel...' });
+        await sleep(1000);
         return await interaction.channel.delete().catch(() => {});
     }
-
-    if (interaction.customId === 'confirm_no_abort') {
-        return await interaction.reply({ content: '✅ Destruction sequence aborted. Channel kept open.', ephemeral: true });
-    }
+    if (interaction.customId === 'confirm_no_abort') return await interaction.reply({ content: '✅ Aborted.', ephemeral: true });
 });
 
 // --- ENGINE BACKUP DEPLOYMENT ---
