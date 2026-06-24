@@ -148,7 +148,7 @@ loadDatabase();
  */
 
 client.on('ready', () => {
-    console.log(`[CORE TERMINAL ACTIVE] Connected and listening as system app: ${client.user.tag}`);
+    console.log("[CORE TERMINAL ACTIVE] Connected and listening as system app: " + client.user.tag);
 });
 
 // Structural security function managing individual visibility matrices on channels
