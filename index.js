@@ -1,9 +1,3 @@
-## If you ever want to change your **UPI ID** or **Crypto Wallet Address**, you will change them in **Part 1** inside the `CONFIG` section.
-
----
-
-## Part 1: `.env` Security, Configuration & Database Persistence
-*Copy and paste this at the very top of your empty `index.js` file.*
 
 ```javascript
 /**
