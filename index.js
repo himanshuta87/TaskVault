@@ -256,7 +256,17 @@ client.on('interactionCreate', async (interaction) => {
     const userId = interaction.user.id;
     const userData = getOrCreateUser(userId);
 
-    if (interaction.customId === 'btn_help_chat') {
+        if (interaction.customId === 'btn_help_chat') {
+        await updateChannelPermissionsForUser(interaction.guild, interaction.member, 'show_chat');
+        const chatChannel = interaction.guild.channels.cache.find(c => c.name === 'chat');
+        
+        // Mobile-safe string concatenation using standard quotes
+        return await interaction.reply({
+            content: "**Need Help?**\nEnter the community chat node:\n👉 " + (chatChannel ? "<#" + chatChannel.id + ">" : "#chat"),
+            ephemeral: true
+        });
+    }
+
         await updateChannelPermissionsForUser(interaction.guild, interaction.member, 'show_chat');
         const chatChannel = interaction.guild.channels.cache.find(c => c.name === 'chat');
         return await interaction.reply({
