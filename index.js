@@ -591,39 +591,45 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 client.on('ready', async () => {
-    const guild = client.guilds.cache.get(CONFIG.GUILD_ID);
-    if (guild) {
-        await guild.commands.set([
-            { name: 'stats', description: 'Displays your current premium status parameters.' },
-            { name: 'myperformance', description: 'Outputs total completed task metrics.' },
-            { name: 'deploychannels', description: 'Administrative infrastructure channel setup organizer.' },
-            { 
-                name: 'grant', 
-                description: 'Allocates manual subscription access time directly.',
-                options: [
-                    { name: 'target_user', description: 'The user profile node to update.', type: 6, required: true },
-                    { name: 'days', description: 'Number of active days access to give.', type: 4, required: true }
-                ]
-            },
-            {
-                name: 'revokesub',
-                description: 'Terminates a specified user subscription manually.',
-                options: [{ name: 'target_user', description: 'The user to strip premium from.', type: 6, required: true }]
-            },
-            {
-                name: 'canreply',
-                description: 'Gives a user permission to view and reply to suggestion tickets.',
-                options: [{ name: 'target_user', description: 'The team member to add.', type: 6, required: true }]
-            },
-            {
-                name: 'revokereply',
-                description: 'Removes a user from the ticket team access list.',
-                options: [{ name: 'target_user', description: 'The user to remove.', type: 6, required: true }]
-            }
-        ]);
-        console.log("[DEPLOYMENT] Global slash interface commands registered smoothly.");
+    try {
+        // Fetches the server securely instead of relying on the instant cache
+        const guild = await client.guilds.fetch(CONFIG.GUILD_ID);
+        if (guild) {
+            await guild.commands.set([
+                { name: "stats", description: "Displays your current premium status parameters." },
+                { name: "myperformance", description: "Outputs total completed task metrics." },
+                { name: "deploychannels", description: "Administrative infrastructure channel setup organizer." },
+                { 
+                    name: "grant", 
+                    description: "Allocates manual subscription access time directly.",
+                    options: [
+                        { name: "target_user", description: "The user profile node to update.", type: 6, required: true },
+                        { name: "days", description: "Number of active days access to give.", type: 4, required: true }
+                    ]
+                },
+                {
+                    name: "revokesub",
+                    description: "Terminates a specified user subscription manually.",
+                    options: [{ name: "target_user", description: "The user to strip premium from.", type: 6, required: true }]
+                },
+                {
+                    name: "canreply",
+                    description: "Gives a user permission to view and reply to suggestion tickets.",
+                    options: [{ name: "target_user", description: "The team member to add.", type: 6, required: true }]
+                },
+                {
+                    name: "revokereply",
+                    description: "Removes a user from the ticket team access list.",
+                    options: [{ name: "target_user", description: "The user to remove.", type: 6, required: true }]
+                }
+            ]);
+            console.log("[DEPLOYMENT] Global slash interface commands registered smoothly.");
+        }
+    } catch (error) {
+        console.log("[WARNING] Could not verify Server ID. Slash commands skipped to prevent crash.");
     }
 });
+
 
 // The bot logs in securely using the Token from your hidden .env file
 client.login(CONFIG.TOKEN);
